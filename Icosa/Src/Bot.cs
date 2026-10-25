@@ -96,12 +96,13 @@ namespace Icosa
         {
             var p = Dm.Player;
             var m = Dm.Map;
-            if (m.Depth != lastDepth) { lastDepth = m.Depth; levelTurn = Dm.Turn; }
+            if (m.Key != lastDepth) { lastDepth = m.Key; levelTurn = Dm.Turn; }
+            if (m.Wild) climbing = false;
             if (Dm.Turn - levelTurn > 3000)
             {
                 var ex = Actions.ExploreMap();
                 var ns = Actions.NextStep(ex);
-                Log("LINGER depth " + m.Depth + " turn " + Dm.Turn + " pos " + p.Pos + " hp " + p.Hp + "/" + p.MaxHp + " nut " + p.Nutrition + " explore " + (ex == null ? "null" : ns?.ToString() ?? "nostep") + " stairsSeen " + m.Seen[m.Down.X, m.Down.Y] + " down " + m.Down + " here " + string.Join(",", m.ItemsAt(p.Pos).Select(i => i.Def.Id)));
+                Log("LINGER key " + m.Key + " turn " + Dm.Turn + " pos " + p.Pos + " hp " + p.Hp + "/" + p.MaxHp + " nut " + p.Nutrition + " explore " + (ex == null ? "null" : ns?.ToString() ?? "nostep") + " stairsSeen " + m.Seen[m.Down.X, m.Down.Y] + " down " + m.Down + " here " + string.Join(",", m.ItemsAt(p.Pos).Select(i => i.Def.Id)) + " tile " + m.T[p.Pos.X, p.Pos.Y] + (ns.HasValue ? " next " + m.T[ns.Value.X, ns.Value.Y] + " occ " + m.MonsterAt(ns.Value)?.Def.Id : "") + (m.Wild ? " goal " + WildGoal(m) + " adj " + string.Join(",", m.Neighbors(p.Pos).Select(q => m.MonsterAt(q)).Where(x => x != null).Select(x => x.Def.Id + (x.Peaceful ? "(p)" : "") + (Dm.CanSeeMonster(x) ? "" : "(unseen)"))) : ""));
                 foreach (var l in Dm.Log.Skip(Math.Max(0, Dm.Log.Count - 8))) Log("   " + Markup.Strip(l.Text));
                 levelTurn = Dm.Turn;
             }
@@ -152,15 +153,22 @@ namespace Icosa
                 if (heavy != null) { Key(g, 'd'); Key(g, heavy.Letter); return; }
             }
             if ((p.Hp < p.MaxHp / 2 || (p.Caster && p.Memorized.Count == 0)) && p.Nutrition > 400) { Key(g, 'R'); return; }
-            if (m.T[p.Pos.X, p.Pos.Y] is Tile.Throne or Tile.OracleDie && Rng.Chance(50)) { Key(g, 'E'); return; }
-            if (m.T[p.Pos.X, p.Pos.Y] == Tile.StairsDown) { Key(g, '>'); return; }
+            if (m.T[p.Pos.X, p.Pos.Y] is Tile.Throne && Rng.Chance(50)) { Key(g, 'E'); return; }
+            if (m.T[p.Pos.X, p.Pos.Y] == Tile.StairsDown && (!m.Wild || p.Pos == WildGoal(m))) { Key(g, '>'); return; }
+            if (m.Wild && !Dm.HeartTaken && hostiles.Count == 0 && StepToward(g, WildGoal(m))) return;
+            if ((m.Town || m.Encounter) && !Dm.HeartTaken && hostiles.Count == 0 && StepToward(g, m.Down)) return;
+            if (climbing && !Dm.HeartTaken)
+            {
+                if (m.T[p.Pos.X, p.Pos.Y] == Tile.StairsUp) { Key(g, '<'); return; }
+                if (StepToward(g, m.Up)) return;
+            }
             if (Dm.HeartTaken)
             {
                 if (m.T[p.Pos.X, p.Pos.Y] == Tile.StairsUp) { Key(g, '<'); return; }
                 Key(g, '<');
                 return;
             }
-            if (m.Depth == Rules.MaxDepth)
+            if (m.Branch == 0 && m.Depth == Rules.MaxDepth)
             {
                 var heart = m.Items.FirstOrDefault(i => i.Def.Kind == IK.Heart);
                 if (heart != null && heart.Pos == p.Pos) { Key(g, 'g'); return; }
@@ -168,7 +176,8 @@ namespace Icosa
             }
             var dist = Actions.ExploreMap();
             if (dist != null && Actions.NextStep(dist) != null && Rng.Chance(97)) { stuckExplore = 0; Key(g, 'X'); return; }
-            if (m.Depth < Rules.MaxDepth && m.Seen[m.Down.X, m.Down.Y] && StepToward(g, m.Down)) return;
+            if (!m.IsBottom && m.Seen[m.Down.X, m.Down.Y] && StepToward(g, m.Down)) return;
+            if (m.IsBottom && m.Branch != 0 && !climbing) { climbing = true; Log("LEAVING " + WorldDb.Get(m.Branch).Name + " at L" + p.Level + " turn " + Dm.Turn + (Dm.Achievements.Any(a => a.Contains(WorldDb.Get(m.Branch).Name)) ? " [boss slain]" : " [boss alive]")); return; }
             stuckExplore++;
             if (stuckExplore > 25)
             {
@@ -179,7 +188,7 @@ namespace Icosa
                         if (m.T[x, y] == Tile.DoorLocked) { locked++; m.T[x, y] = Tile.DoorClosed; }
                         if (m.T[x, y] == Tile.DoorSecret) secret++;
                     }
-                Log("EXPLORE-STUCK depth " + m.Depth + " turn " + Dm.Turn + " stairsSeen " + (m.Depth < Rules.MaxDepth && m.Seen[m.Down.X, m.Down.Y]) + " locked " + locked + " secret " + secret);
+                Log("EXPLORE-STUCK depth " + m.Depth + " turn " + Dm.Turn + " stairsSeen " + (!m.IsBottom && m.Seen[m.Down.X, m.Down.Y]) + " locked " + locked + " secret " + secret);
                 m.RevealMap(false);
                 stuckExplore = 0;
             }
@@ -187,6 +196,14 @@ namespace Icosa
         }
 
         int stuckExplore;
+        bool climbing;
+
+        Point WildGoal(Map m)
+        {
+            var p = Dm.Player;
+            var side = m.Places.Where(pl => pl.Dungeon && pl.Branch != 0 && !Dm.Levels.ContainsKey(pl.Branch * 100 + WorldDb.Get(pl.Branch).Top) && WorldDb.Get(pl.Branch).Top <= p.Level + 1).OrderBy(pl => WorldDb.Get(pl.Branch).Top).FirstOrDefault();
+            return side?.At ?? m.Down;
+        }
         int lastDepth = -1;
         long levelTurn;
 

@@ -209,6 +209,7 @@ namespace Icosa
                 Anim.SpeedMul = 100f;
                 Synth.Muted = true;
             }
+            if (auto != null || bot != null) { SaveGame.Disabled = true; Hof.Disabled = true; }
             int si = Array.IndexOf(args, "--seed");
             if (si >= 0 && si + 1 < args.Length) Rng.Init(int.Parse(args[si + 1]));
             else Rng.Init(Environment.TickCount);

@@ -10,6 +10,7 @@ namespace Icosa
     {
         enum Auto { None, Run, Rest, Explore, Travel, Search }
         Auto auto;
+        Map autoMap;
         Point runDir;
         float autoTimer;
         int autoSteps;
@@ -68,6 +69,8 @@ namespace Icosa
             var p = P;
             if (Dm.GameOver) { StopAuto(); return; }
             if (Dm.Interrupted && autoSteps > 0) { StopAuto(); return; }
+            if (autoSteps == 0) autoMap = M;
+            else if (autoMap != M) { StopAuto(); return; }
             int before = Dm.Log.Count;
             Dm.Interrupted = false;
             autoSteps++;
@@ -95,14 +98,14 @@ namespace Icosa
                 case Auto.Explore:
                     {
                         if (HostileInView()) { if (autoSteps == 1) Dm.Msg("{warn}Not with enemies in view!{/}"); StopAuto(); return; }
-                        Actions.Visited.Add((M.Depth, p.Pos));
+                        Actions.Visited.Add((M.Key, p.Pos));
                         var dist = Actions.ExploreMap();
                         var next = Actions.NextStep(dist);
                         if (next == null)
                         {
                             bool lockedKnown = false;
                             for (int lx = 0; lx < Map.W && !lockedKnown; lx++) for (int ly = 0; ly < Map.H; ly++) if (M.Seen[lx, ly] && M.T[lx, ly] == Tile.DoorLocked) { lockedKnown = true; break; }
-                            if (M.Depth < Rules.MaxDepth && M.Seen[M.Down.X, M.Down.Y]) Dm.Msg("{dim}Explored. Press > to travel to the stairs down.{/}");
+                            if (!M.IsBottom && M.Seen[M.Down.X, M.Down.Y]) Dm.Msg(M.Wild ? "{dim}Explored. Press > to travel to the Tomb.{/}" : M.Town ? "{dim}Explored. Press > to walk to the south gate.{/}" : "{dim}Explored. Press > to travel to the stairs down.{/}");
                             else if (lockedKnown) Dm.Msg("{warn}Everything you can reach is explored. Locked doors remain — kick them (D) or pick them.{/}");
                             else Dm.Msg("{warn}Everything you can reach is explored. Search (s) dead ends and odd walls for secret doors.{/}");
                             StopAuto();
@@ -111,7 +114,7 @@ namespace Icosa
                         var d = new Point(next.Value.X - p.Pos.X, next.Value.Y - p.Pos.Y);
                         var old = p.Pos;
                         if (!Actions.TryMove(d, out _, out _) || p.Pos == old) { if (M.T[next.Value.X, next.Value.Y] != Tile.DoorOpen) StopAuto(); }
-                        if (M.ItemsAt(p.Pos).Any(i => !i.IsGold)) { Actions.Visited.Add((M.Depth, p.Pos)); StopAuto(); }
+                        if (M.ItemsAt(p.Pos).Any(i => !i.IsGold)) { Actions.Visited.Add((M.Key, p.Pos)); StopAuto(); }
                         break;
                     }
                 case Auto.Travel:
@@ -149,14 +152,17 @@ namespace Icosa
             {
                 switch (k.Ch)
                 {
-                    case 'd': if (M.Depth < Rules.MaxDepth) { Dm.EnterLevel(M.Depth + 1, Dm.Arrival.Down); Dm.UpdateVision(); } return;
+                    case 'd': if (!M.IsBottom) { Dm.EnterLevel(M.Depth + 1, Dm.Arrival.Down); Dm.UpdateVision(); } return;
                     case 'm': M.RevealMap(true); Dm.UpdateVision(); return;
+                    case 'e': if (M.Wild) Wild.Begin(M.T[p.Pos.X, p.Pos.Y]); return;
+                    case 'b': { var bd = WorldDb.Get(M.Branch % 3 + 1); Dm.EnterLevel(bd.Top, Dm.Arrival.Down, bd.Branch); Dm.UpdateVision(); return; }
+                    case 'u': if (M.Outdoors) return; Dm.EnterLevel(M.Depth == WorldDb.Get(M.Branch).Top ? 0 : M.Depth - 1, Dm.Arrival.Up, M.Depth == WorldDb.Get(M.Branch).Top ? 0 : M.Branch); Dm.UpdateVision(); return;
                     case 'h': p.Hp = p.MaxHp; p.Nutrition = 1500; return;
                     case 'l': p.Xp = Rules.XpFor(p.Class, p.Level + 1); Dm.GainXp(1); return;
                     case 'i': Actions.GiveOrDrop(Spawn.RandomItem(M.Depth + 3)); return;
                 }
             }
-            if (k.Is(Keys.F2) || k.Is('M')) { Synth.Muted = !Synth.Muted; Synth.Ambience(M.Depth); Dm.Msg("{dim}Sound " + (Synth.Muted ? "off" : "on") + ".{/}"); return; }
+            if (k.Is(Keys.F2) || k.Is('M')) { Synth.Muted = !Synth.Muted; Synth.Ambience(M.Outdoors ? 0 : M.Depth); Dm.Msg("{dim}Sound " + (Synth.Muted ? "off" : "on") + ".{/}"); return; }
             if (!p.Has(Status.Hidden) || true) { }
             if (k.Dir(out var d, out bool run))
             {
@@ -173,20 +179,13 @@ namespace Icosa
                 case 'R': auto = Auto.Rest; autoSteps = 0; return;
                 case 'X': auto = Auto.Explore; autoSteps = 0; return;
                 case '>':
-                    if (M.T[p.Pos.X, p.Pos.Y] == Tile.StairsDown) Actions.Stairs(true);
-                    else if (M.Depth < Rules.MaxDepth && M.Seen[M.Down.X, M.Down.Y]) { travelGoal = M.Down; auto = Auto.Travel; autoSteps = 0; }
+                    if (M.T[p.Pos.X, p.Pos.Y] == Tile.StairsDown || M.PlaceAt(p.Pos) != null) Actions.Stairs(true);
+                    else if (!M.IsBottom && M.Seen[M.Down.X, M.Down.Y]) { travelGoal = M.Down; auto = Auto.Travel; autoSteps = 0; }
                     else Dm.Msg("You don't know where the stairs down are.");
                     return;
                 case '<':
-                    if (M.T[p.Pos.X, p.Pos.Y] == Tile.StairsUp)
-                    {
-                        if (M.Depth == 1)
-                        {
-                            if (Dm.HeartTaken) { Dm.Msg("{gold}You climb the last stair into the dawn, the Icosahedral Heart beating in your hands.{/}", true); Dm.Win(); }
-                            else Prompts.YesNo("Leave the dungeon without the Heart? (This ends your adventure.)", () => Dm.Retire());
-                        }
-                        else Actions.Stairs(false);
-                    }
+                    if (M.T[p.Pos.X, p.Pos.Y] == Tile.StairsUp) Actions.Stairs(false);
+                    else if (M.Town && WorldDb.TownOf(M.Branch).Start && p.Pos == M.Up) Prompts.YesNo("Hang up your pack and retire to a quiet life in Lantern Hollow? (This ends your adventure.)", () => Dm.Retire());
                     else if (M.Seen[M.Up.X, M.Up.Y]) { travelGoal = M.Up; auto = Auto.Travel; autoSteps = 0; }
                     else Dm.Msg("You don't know where the stairs up are.");
                     return;
@@ -718,9 +717,12 @@ namespace Icosa
         void DrawHeader(Terminal t)
         {
             t.Fill(0, 0, 100, 1, Pal.C(22, 17, 12));
-            var name = Rules.DepthNames[Math.Min(M.Depth, Rules.DepthNames.Length - 1)];
-            t.PrintM(1, 0, "{gold}Level " + M.Depth + "{/} {dim}·{/} " + name + (Dm.HeartTaken ? "  {pink}♥ The Heart beats. Climb!{/}" : ""), Pal.Text);
+            var name = WorldDb.LevelName(M);
+            var here = M.PlaceAt(P.Pos);
+            if (M.Wild && here == null) name += " {dim}·{/} " + M.Def(P.Pos).Name;
+            if (here != null) name += " {dim}·{/} " + WorldDb.Cap(here.Name);
             string right = "{dim}Turn{/} " + Dm.Turn + "   {dim}? help{/}";
+            t.PrintM(1, 0, "{gold}" + WorldDb.LevelTag(M) + "{/} {dim}·{/} " + name + (Dm.HeartTaken ? "  {pink}♥ The Heart beats. Climb!{/}" : ""), Pal.Text, 96 - Markup.Len(right));
             t.PrintM(99 - Markup.Len(right), 0, right, Pal.Text);
         }
 
@@ -752,6 +754,8 @@ namespace Icosa
                         if (tile == Tile.Brazier) fg = Shimmer(fg, x, y, 9f, 0.2f);
                         if (tile == Tile.OracleDie) fg = Pal.Lerp(Pal.White, Pal.C(170, 170, 255), (float)Math.Sin(time * 2) * 0.5f + 0.5f);
                         if (tile == Tile.Chasm) { fg = Pal.C(20, 20, 30); bg = Pal.C(2, 2, 6); }
+                        if (tile == Tile.StairsDown && M.Wild && M.DungeonAt(new Point(x, y)) is Place hole) fg = Pal.Lerp(WorldDb.Get(hole.Branch).C, Pal.White, (float)Math.Sin(time * 2.5f) * 0.25f + 0.25f);
+                        if (tile == Tile.Bell) fg = Shimmer(fg, x, y, 1.5f, 0.15f);
                         float lr = M.LR[x, y], lg = M.LG[x, y], lb = M.LB[x, y];
                         float lum = Math.Max(lr, Math.Max(lg, lb));
                         float flick = 1f + 0.04f * (float)Math.Sin(time * 11 + x * 1.7f + y * 2.3f) * Math.Min(1, lum);
@@ -804,6 +808,8 @@ namespace Icosa
                             ink = Pal.C(70, 90, 140);
                         }
                         else if (g == '·') ink = Pal.C(55, 75, 125);
+                        if (tile is Tile.Road or Tile.Bridge) ink = Pal.C(150, 110, 70);
+                        if (tile == Tile.TownSite) ink = Pal.C(230, 190, 110);
                         if (g == '>' || g == '<') ink = Pal.C(200, 220, 255);
                         t.Put(sx, sy, g, ink, bg);
                         t.Paper[sx, sy] = true;
@@ -924,7 +930,7 @@ namespace Icosa
                 string a = StatCell(p, (Stat)i), b = StatCell(p, (Stat)(i + 1));
                 t.PrintM(x + 1, row++, a + "  " + b, Pal.Text);
             }
-            t.PrintM(x + 1, row++, "{dim}Gold{/} {gold}" + p.Gold + "{/}   {dim}Depth{/} " + M.Depth + "/" + p.DeepestDepth, Pal.Text);
+            t.PrintM(x + 1, row++, "{dim}Gold{/} {gold}" + p.Gold + "{/}   {dim}Depth{/} " + (M.Outdoors ? "surface" : M.Depth + "/" + p.DeepestDepth), Pal.Text);
             var wpn = p.Weapon;
             t.PrintM(x + 1, row++, "{dim}Wield{/} " + (wpn == null ? "bare hands" : wpn.Name(false, false)), Pal.Text, w - 2);
             var st = StatusList(p);

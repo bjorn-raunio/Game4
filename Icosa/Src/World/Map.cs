@@ -9,7 +9,8 @@ namespace Icosa
     {
         Wall, Floor, Corridor, DoorClosed, DoorOpen, DoorLocked, DoorSecret, DoorBroken, StairsUp, StairsDown,
         Shallow, DeepWater, Lava, Chasm, Rubble, Grass, Moss, Fountain, DryFountain, Altar, Throne, Statue, Pillar,
-        Bookshelf, Sarcophagus, Brazier, Web, Bridge, Rug, OracleDie, Dais, Crystal, Mushroom, Bones, PermWall, BoneVeil, Glyph, Ash
+        Bookshelf, Sarcophagus, Brazier, Web, Bridge, Rug, OracleDie, Dais, Crystal, Mushroom, Bones, PermWall, BoneVeil, Glyph, Ash,
+        Tree, Pine, Mountain, Road, Meadow, TallGrass, Flowers, Field, Bell, Plains, Forest, Wildwood, Hills, Marsh, TownSite, Grave
     }
 
     public class TileDef
@@ -94,12 +95,22 @@ namespace Icosa
         public Point Door;
         public Point Inside;
         public Monster KeeperMon;
+        public int Level;
+    }
+
+    public class Place
+    {
+        public string Name, Kind, Blurb;
+        public Rectangle R;
+        public Point At;
+        public int Branch = -1;
+        public bool Dungeon => Kind == "dungeon";
     }
 
     public partial class Map
     {
         public const int W = 100, H = 36;
-        public int Depth;
+        public int Depth, Branch;
         public readonly Tile[,] T = new Tile[W, H];
         public readonly bool[,] Seen = new bool[W, H];
         public readonly bool[,] Vis = new bool[W, H];
@@ -121,6 +132,7 @@ namespace Icosa
         public readonly List<Room> Rooms = new List<Room>();
         public readonly List<StaticLight> Lights = new List<StaticLight>();
         public readonly List<Shop> Shops = new List<Shop>();
+        public readonly List<Place> Places = new List<Place>();
         public readonly Dictionary<Point, int> FeatureUses = new Dictionary<Point, int>();
         public Point Up, Down;
         public Color WallFg, WallBg, FloorFg, FloorBg;
@@ -178,12 +190,39 @@ namespace Icosa
             D(Tile.BoneVeil, '║', C(255, 220, 140), C(70, 30, 30), false, false, "the Bone Veil", "A towering lattice of fused bone, carved with the names of everyone who has died in the Tomb. There is room left for yours.");
             D(Tile.Glyph, '¤', C(255, 240, 160), C(40, 35, 10), true, true, "burning glyph", "A holy glyph etched into the floor.");
             D(Tile.Ash, '·', C(80, 75, 70), C(18, 16, 15), true, true, "ash");
+            D(Tile.Tree, '♣', C(70, 150, 60), C(14, 32, 12), true, false, "stand of oaks", "Old oaks, close enough together to hide anything. You can push through.");
+            D(Tile.Pine, '♠', C(40, 115, 75), C(8, 24, 16), false, false, "dense pinewood", "Black pines grown so thick that not even the wind gets in.");
+            D(Tile.Mountain, '▲', C(165, 155, 140), C(52, 48, 44), false, false, "mountain", "Grey crags. As far as anyone can climb, the Weald ends here.");
+            D(Tile.Road, '·', C(170, 140, 95), C(44, 34, 22), true, true, "road", "A rutted cart road, packed hard by generations of boots walking toward holes in the ground.");
+            D(Tile.Meadow, '·', C(90, 150, 70), C(16, 30, 12), true, true, "meadow");
+            D(Tile.TallGrass, '"', C(110, 170, 80), C(18, 34, 14), true, true, "tall grass");
+            D(Tile.Flowers, '°', C(220, 150, 210), C(20, 32, 16), true, true, "wildflowers", "Pale flowers that turn to follow you instead of the sun.");
+            D(Tile.Field, '"', C(220, 190, 90), C(48, 38, 12), true, true, "barley field");
+            D(Tile.Bell, '♪', C(220, 170, 80), C(40, 30, 14), false, true, "hollow bell", "A bronze bell with no clapper, hung from a post of blackened oak. Sometimes it rings by itself. (E to ring it)", true);
+            D(Tile.Plains, '·', C(130, 165, 85), C(24, 36, 16), true, true, "plains", "Open grassland, a mile of it to every square of your map.");
+            D(Tile.Forest, '♣', C(70, 150, 65), C(12, 30, 12), true, true, "forest", "Woodland. Slow going, and things live in it.");
+            D(Tile.Wildwood, '♠', C(45, 115, 75), C(6, 22, 12), true, false, "wildwood", "Old, black forest where the trees remember being planted. Very slow going.");
+            D(Tile.Hills, '∩', C(185, 150, 95), C(46, 36, 20), true, true, "hills", "Rolling hills. You can see a long way from the tops of them.");
+            D(Tile.Marsh, '"', C(130, 150, 90), C(22, 32, 26), true, true, "marsh", "Reeds, black water and sucking mud.");
+            D(Tile.TownSite, 'Π', C(245, 215, 130), C(70, 46, 22), true, true, "settlement", null, true);
+            D(Tile.Grave, '∩', C(175, 175, 165), C(24, 30, 20), false, true, "gravestone", "A lamplighter's headstone. A little lantern burns on top of it, as it has every night since the burial.");
         }
 
-        public Map(int depth)
+        public Map(int depth, int branch = 0)
         {
             Depth = depth;
+            Branch = branch;
         }
+
+        public int Key => Branch * 100 + Depth;
+        public bool Wild => Branch == 0 && Depth == 0;
+        public bool Town => Branch >= 10 && Branch < 20;
+        public bool Encounter => Branch == 99;
+        public bool Outdoors => Wild || Town || Encounter;
+        public bool IsBottom => !Outdoors && (Branch == 0 ? Depth >= Rules.MaxDepth : Depth >= WorldDb.Get(Branch).Bottom);
+        public bool NoFall => Outdoors || IsBottom || (Branch == 0 && Depth >= Rules.MaxDepth - 1);
+        public Place PlaceAt(Point p) => Wild ? Places.FirstOrDefault(pl => pl.At == p) : null;
+        public Place DungeonAt(Point p) => Places.FirstOrDefault(pl => pl.Dungeon && pl.At == p);
 
         public static bool InB(int x, int y) => x >= 0 && y >= 0 && x < W && y < H;
         public static bool InB(Point p) => InB(p.X, p.Y);
@@ -288,7 +327,7 @@ namespace Icosa
             for (int i = 0; i < tries; i++)
             {
                 var p = new Point(Rng.Range(1, W - 2), Rng.Range(1, H - 2));
-                if ((T[p.X, p.Y] is Tile.Floor or Tile.Corridor or Tile.Grass or Tile.Moss or Tile.Rug or Tile.Bones or Tile.Shallow or Tile.Rubble) && (ok == null || ok(p))) return p;
+                if ((T[p.X, p.Y] is Tile.Floor or Tile.Corridor or Tile.Grass or Tile.Moss or Tile.Rug or Tile.Bones or Tile.Shallow or Tile.Rubble or Tile.Meadow or Tile.TallGrass or Tile.Flowers or Tile.Road or Tile.Field or Tile.Plains or Tile.Forest or Tile.Hills or Tile.Marsh) && (ok == null || ok(p))) return p;
             }
             for (int x = 1; x < W - 1; x++)
                 for (int y = 1; y < H - 1; y++)
@@ -401,7 +440,7 @@ namespace Icosa
                 return;
             }
             var pp = p.Pos;
-            Fov.Compute(pp, 60, BlocksSight, (x, y) =>
+            Fov.Compute(pp, Wild ? (T[pp.X, pp.Y] == Tile.Hills ? 7 : 4) : 60, BlocksSight, (x, y) =>
             {
                 if (!InB(x, y)) return;
                 int d = Math.Max(Math.Abs(x - pp.X), Math.Abs(y - pp.Y));
@@ -488,7 +527,7 @@ namespace Icosa
                     if (Fire[x, y] > 0)
                     {
                         Fire[x, y]--;
-                        if (Fire[x, y] == 0 && T[x, y] is Tile.Grass or Tile.Web) T[x, y] = Tile.Ash;
+                        if (Fire[x, y] == 0 && T[x, y] is Tile.Grass or Tile.Web or Tile.TallGrass or Tile.Field or Tile.Flowers or Tile.Tree) T[x, y] = Tile.Ash;
                     }
                     if (Stain[x, y] > 0.1f && Rng.OneIn(4000)) Stain[x, y] *= 0.9f;
                 }

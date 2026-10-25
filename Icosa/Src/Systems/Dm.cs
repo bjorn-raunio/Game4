@@ -60,6 +60,7 @@ namespace Icosa
             Achievements.Clear();
             Spawn.ArtifactsMade.Clear();
             Actions.Visited.Clear();
+            Party.Clear();
             foreach (var it in p.Pack) if (it.Def.Unknown) Ident.Learn(it.Def.Id);
             Turn = 0;
             Tick = 0;
@@ -69,37 +70,67 @@ namespace Icosa
             Engulfer = null;
             Anim.Clear();
             StartTicks = DateTime.Now.Ticks;
-            EnterLevel(1, Arrival.Start);
-            Msg("{hi}Welcome, " + p.PName + " the " + p.RaceInfo.Name + " " + p.ClassInfo.Name + ".{/}");
-            Msg("Somewhere below waits the {pink}Icosahedral Heart{/}, and the Hollow King who guards it. Press {yellow}?{/} for help.");
+            Map = null;
+            Levels[0] = Gen.Generate(0, 0);
+            EnterLevel(0, Arrival.Start, WorldDb.StartTown.Branch);
+            Msg("{hi}Welcome to Lantern Hollow, " + p.PName + " the " + p.RaceInfo.Name + " " + p.ClassInfo.Name + ".{/}");
+            Msg("A day's walk to the {pink}" + Compass(Levels[0].Up, Levels[0].Down) + "{/} lies the Tomb, and in it the {pink}Icosahedral Heart{/}. Walk out of the village to reach the Weald. Press {yellow}?{/} for help.");
+        }
+
+        public static string Compass(Point from, Point to)
+        {
+            int dx = to.X - from.X, dy = to.Y - from.Y;
+            string ns = dy * 3 < -Math.Abs(dx) ? "north" : dy * 3 > Math.Abs(dx) ? "south" : "";
+            string ew = dx > Math.Abs(dy) ? "east" : dx < -Math.Abs(dy) ? "west" : "";
+            return ns + ew == "" ? "near" : ns + ew;
         }
 
         public enum Arrival { Start, Down, Up, Fall, Teleport }
 
-        public static void EnterLevel(int depth, Arrival how)
+        public static readonly List<Monster> Party = new List<Monster>();
+        public static bool Travelled;
+
+        public static void EnterLevel(int depth, Arrival how, int branch = -1)
         {
-            if (Map != null)
+            var old = Map;
+            int br = branch >= 0 ? branch : old?.Branch ?? 0;
+            if (!WorldDb.Holds(br, depth)) br = 0;
+            bool toWild = br == 0 && depth == 0;
+            var followers = new List<Monster>();
+            if (old != null && old.Wild)
             {
-                Map.Monsters.RemoveAll(m => m.Ally && Path.Cheb(m.Pos, Player.Pos) > 1);
+                old.Up = Player.Pos;
+                followers.AddRange(Party);
+                Party.Clear();
             }
-            var followers = Map == null ? new List<Monster>() : Map.Monsters.Where(m => !m.Dead && (m.Ally || (m.Hostile && m.Aware > 0 && !m.Sleeping && m.CanAct && !m.Def.Has(MF.Immobile))) && Path.Cheb(m.Pos, Player.Pos) <= 1 && !m.Def.Has(MF.Shopkeeper)).ToList();
-            if (Map != null) foreach (var f in followers) Map.Monsters.Remove(f);
-            bool fresh = !Levels.TryGetValue(depth, out var m);
+            else if (old != null)
+            {
+                old.Monsters.RemoveAll(m => m.Ally && Path.Cheb(m.Pos, Player.Pos) > 1);
+                followers = old.Monsters.Where(m => !m.Dead && (m.Ally || (m.Hostile && m.Aware > 0 && !m.Sleeping && m.CanAct && !m.Def.Has(MF.Immobile) && !m.Def.Has(MF.Unique))) && Path.Cheb(m.Pos, Player.Pos) <= 1 && !m.Def.Has(MF.Shopkeeper) && !m.Def.Has(MF.Townsfolk)).ToList();
+                if (toWild) followers.RemoveAll(f => !f.Ally);
+                foreach (var f in followers) old.Monsters.Remove(f);
+                if (toWild) { Party.AddRange(followers); followers.Clear(); }
+            }
+            int key = br * 100 + depth;
+            bool fresh = !Levels.TryGetValue(key, out var m);
             if (fresh)
             {
-                m = Gen.Generate(depth);
-                Levels[depth] = m;
+                m = Gen.Generate(depth, br);
+                Levels[key] = m;
             }
             Map = m;
+            if (old != null && old != m && old.Encounter) Levels.Remove(old.Key);
             Engulfer = null;
             Player.Remove(Status.Engulfed);
             Player.Remove(Status.Swallowed);
             Player.Remove(Status.Held);
             Point pos = how switch
             {
+                _ when m.Wild => m.Up,
+                Arrival.Down when m.Town => new Point(m.Down.X, m.Down.Y - 1),
                 Arrival.Down => m.Up,
                 Arrival.Start => m.Up,
-                Arrival.Up => m.Depth >= Rules.MaxDepth ? m.Up : m.Down,
+                Arrival.Up => m.IsBottom ? m.Up : m.Down,
                 _ => m.RandomFloor(q => m.MonsterAt(q) == null && m.T[q.X, q.Y] != Tile.Chasm),
             };
             var free = m.NearestFree(pos, 8);
@@ -112,23 +143,41 @@ namespace Icosa
                 f.Energy = 0;
                 m.Monsters.Add(f);
             }
-            if (depth > Player.DeepestDepth) Player.DeepestDepth = depth;
-            Synth.Ambience(depth);
+            if (depth > Player.DeepestDepth && !m.Outdoors) Player.DeepestDepth = depth;
+            Synth.Ambience(m.Outdoors ? 0 : depth);
             Anim.Clear();
             KnownHostiles.Clear();
             UpdateVision();
             m.ComputePlayerDist(Player);
-            if (fresh || !m.Visited)
+            if ((fresh || !m.Visited) && !m.Encounter)
             {
-                Msg("{gold}— Level " + depth + ": " + Rules.DepthNames[Math.Min(depth, Rules.DepthNames.Length - 1)] + " —{/}");
+                if (m.Wild) Msg("{gold}— " + WorldDb.WildName + " —{/}");
+                else if (m.Town) Msg("{gold}— " + WorldDb.LevelName(m) + " —{/}");
+                else if (m.Branch == 0) Msg("{gold}— Level " + depth + ": " + WorldDb.LevelName(m) + " —{/}");
+                else Msg("{gold}— " + WorldDb.Cap(WorldDb.Get(m.Branch).Name) + ", " + WorldDb.LevelTag(m).Split(' ')[1] + ": " + WorldDb.LevelName(m) + " —{/}");
                 if (m.Feeling != null) Msg("{dim}" + m.Feeling + "{/}");
             }
+            else if (m.Wild && old != null && !old.Outdoors) Msg("{gold}You climb out into the daylight of the Weald.{/}");
             m.Visited = true;
+            if (m.Outdoors && !m.Encounter && Player.Carrying("heart"))
+            {
+                Msg("{gold}You climb into the open sky with the Icosahedral Heart beating in your hands. Every hollow bell in the Weald rings at once, and then, for the first time in nine hundred years, they all stop.{/}", true);
+                Win();
+                return;
+            }
             if (HeartTaken && fresh == false && how == Arrival.Up && depth % 3 == 0)
             {
                 Msg("{bad}The dungeon shudders. It knows what you carry.{/}");
                 for (int i = 0; i < 2; i++) WanderingMonster(true);
             }
+        }
+
+        public static void LeaveLocal()
+        {
+            var old = Map;
+            if (old.Encounter) Msg(old.Monsters.Any(x => !x.Dead && x.Hostile) ? "{dim}You slip away into the Weald.{/}" : "{dim}You go on your way.{/}");
+            else Msg("{dim}You leave " + WorldDb.LevelName(old) + " behind.{/}");
+            EnterLevel(0, Arrival.Up, 0);
         }
 
         public static void Msg(string text, bool important = false)
@@ -284,8 +333,13 @@ namespace Icosa
 
         public static void PlayerActed(int cost = ActCost)
         {
+            bool travel = Travelled && Map.Wild;
+            Travelled = false;
+            if (travel) cost *= Wild.TravelTurns(Map.T[Player.Pos.X, Player.Pos.Y]);
+            var before = Map;
             Player.Energy -= cost;
             Run();
+            if (travel && Map == before) Wild.CheckEncounter(Player.RestTurns > 0);
         }
 
         static void Run()
@@ -372,7 +426,7 @@ namespace Icosa
             if (p.Nutrition < -400) { Die("starvation"); return; }
 
             var light = p.Worn(Slot.Light);
-            if (light != null && light.Lit && light.Def.Fuel < 99999)
+            if (light != null && light.Lit && light.Def.Fuel < 99999 && !Map.Outdoors)
             {
                 light.Fuel--;
                 if (light.Fuel == 100) Msg("{warn}Your " + light.Def.Name + " is burning low.{/}", true);
@@ -496,7 +550,7 @@ namespace Icosa
 
             WanderCounter++;
             int interval = HeartTaken ? 25 : 60;
-            if (WanderCounter >= interval)
+            if (WanderCounter >= interval && !Map.Outdoors)
             {
                 WanderCounter = 0;
                 int roll = Rng.D(6);
@@ -810,6 +864,15 @@ namespace Icosa
             if (k.StartsWith("a ") || k.StartsWith("an ") || k.StartsWith("the ") || k.StartsWith("Death") || k.StartsWith("you") || char.IsUpper(k.FirstOrDefault())) return "killed by " + k;
             if (k.StartsWith("being") || k.StartsWith("having") || k.StartsWith("turning") || k.StartsWith("walking") || k.StartsWith("falling") || k.StartsWith("kicking")) return "died " + k;
             return "died of " + k;
+        }
+
+        public static string Where(bool shortForm)
+        {
+            if (Map == null) return "";
+            if (Map.Wild || Map.Encounter) return "in the Weald";
+            if (Map.Town) return "in " + WorldDb.TownOf(Map.Branch).Name;
+            if (Map.Branch == 0) return (shortForm ? "on dungeon level " : "on level ") + Depth;
+            return shortForm ? "in the " + WorldDb.Get(Map.Branch).Short : "in " + WorldDb.Get(Map.Branch).Name + " (level " + Depth + ")";
         }
 
         public static string PlayTime()

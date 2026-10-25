@@ -9,7 +9,7 @@ namespace Icosa
     public static class SaveGame
     {
         const int Magic = 0x1C05A;
-        const int Version = 4;
+        const int Version = 6;
 
         static string FilePath => System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Icosa", "save.dat");
         public static bool Disabled;
@@ -83,7 +83,9 @@ namespace Icosa
             foreach (var (d, p) in Actions.Visited) { w.Write(d); WritePoint(w, p); }
             w.Write(Dm.Levels.Count);
             foreach (var kv in Dm.Levels) { w.Write(kv.Key); WriteMap(w, kv.Value); }
-            w.Write(Dm.Map.Depth);
+            w.Write(Dm.Party.Count);
+            foreach (var mon in Dm.Party) WriteMonster(w, mon);
+            w.Write(Dm.Map.Key);
             WritePlayer(w, Dm.Player);
             w.Write(Dm.Engulfer != null ? Dm.Map.Monsters.IndexOf(Dm.Engulfer) : -1);
             w.Write(Dm.Player.Holder is Monster hm ? Dm.Map.Monsters.IndexOf(hm) : -1);
@@ -123,6 +125,9 @@ namespace Icosa
             Dm.Levels.Clear();
             int nlev = r.ReadInt32();
             for (int i = 0; i < nlev; i++) { int d = r.ReadInt32(); Dm.Levels[d] = ReadMap(r); }
+            Dm.Party.Clear();
+            int npt = r.ReadInt32();
+            for (int i = 0; i < npt; i++) Dm.Party.Add(ReadMonster(r));
             Dm.Map = Dm.Levels[r.ReadInt32()];
             Dm.Player = ReadPlayer(r);
             int eng = r.ReadInt32();
@@ -136,7 +141,7 @@ namespace Icosa
             Anim.Clear();
             Dm.UpdateVision();
             Dm.Map.ComputePlayerDist(Dm.Player);
-            Synth.Ambience(Dm.Map.Depth);
+            Synth.Ambience(Dm.Map.Outdoors ? 0 : Dm.Map.Depth);
         }
 
         static void WriteStrings(BinaryWriter w, List<string> l)
@@ -351,6 +356,7 @@ namespace Icosa
         static void WriteMap(BinaryWriter w, Map m)
         {
             w.Write(m.Depth);
+            w.Write(m.Branch);
             for (int x = 0; x < Map.W; x++)
                 for (int y = 0; y < Map.H; y++)
                 {
@@ -396,6 +402,7 @@ namespace Icosa
                 WritePoint(w, s.Door);
                 WritePoint(w, s.Inside);
                 w.Write(s.KeeperMon != null ? alive.IndexOf(s.KeeperMon) : -1);
+                w.Write(s.Level);
             }
             w.Write(m.FeatureUses.Count);
             foreach (var kv in m.FeatureUses) { WritePoint(w, kv.Key); w.Write(kv.Value); }
@@ -408,11 +415,13 @@ namespace Icosa
             w.Write(m.Ambient);
             WriteNullableString(w, m.Feeling);
             w.Write(m.Visited);
+            w.Write(m.Places.Count);
+            foreach (var pl in m.Places) { w.Write(pl.Name); w.Write(pl.Kind); WriteNullableString(w, pl.Blurb); w.Write(pl.R.X); w.Write(pl.R.Y); w.Write(pl.R.Width); w.Write(pl.R.Height); WritePoint(w, pl.At); w.Write(pl.Branch); }
         }
 
         static Map ReadMap(BinaryReader r)
         {
-            var m = new Map(r.ReadInt32());
+            var m = new Map(r.ReadInt32(), r.ReadInt32());
             for (int x = 0; x < Map.W; x++)
                 for (int y = 0; y < Map.H; y++)
                 {
@@ -462,6 +471,7 @@ namespace Icosa
                 s.Inside = ReadPoint(r);
                 int ki = r.ReadInt32();
                 s.KeeperMon = ki >= 0 && ki < m.Monsters.Count ? m.Monsters[ki] : null;
+                s.Level = r.ReadInt32();
                 m.Shops.Add(s);
             }
             int nf = r.ReadInt32();
@@ -475,6 +485,8 @@ namespace Icosa
             m.Ambient = r.ReadSingle();
             m.Feeling = ReadNullableString(r);
             m.Visited = r.ReadBoolean();
+            int np = r.ReadInt32();
+            for (int i = 0; i < np; i++) m.Places.Add(new Place { Name = r.ReadString(), Kind = r.ReadString(), Blurb = ReadNullableString(r), R = new Rectangle(r.ReadInt32(), r.ReadInt32(), r.ReadInt32(), r.ReadInt32()), At = ReadPoint(r), Branch = r.ReadInt32() });
             return m;
         }
 

@@ -17,25 +17,29 @@ namespace Icosa
             public bool Cave;
         }
 
-        public static Map Generate(int depth)
+        public static Map Generate(int depth, int branch = 0)
         {
+            if (branch == 0 && depth == 0) return Wild.Generate();
+            if (WorldDb.TownOf(branch) != null) return Wild.Town(branch);
+            if (branch == 99) return Wild.Encounter(depth);
             for (int attempt = 0; attempt < 20; attempt++)
             {
-                var m = TryGenerate(depth);
+                var m = TryGenerate(depth, branch);
                 if (m != null) return m;
             }
-            return TryGenerate(depth, true);
+            return TryGenerate(depth, branch, true);
         }
 
-        static Map TryGenerate(int depth, bool force = false)
+        static Map TryGenerate(int depth, int branch, bool force = false)
         {
-            var m = new Map(depth);
+            var m = new Map(depth, branch);
             SetTheme(m);
             for (int x = 0; x < Map.W; x++)
                 for (int y = 0; y < Map.H; y++)
                     m.T[x, y] = (x == 0 || y == 0 || x == Map.W - 1 || y == Map.H - 1) ? Tile.PermWall : Tile.Wall;
 
-            Style style = depth switch
+            int caves = branch == 0 ? -1 : WorldDb.Get(branch).CaveChance;
+            Style style = caves >= 0 ? (caves >= 60 ? Style.Caves : Rng.Chance(caves * 2) ? Style.Mixed : Style.Rooms) : depth switch
             {
                 4 => Style.Mixed,
                 6 => Style.Caves,
@@ -46,7 +50,7 @@ namespace Icosa
             };
 
             Room finalHall = null;
-            if (depth == Rules.MaxDepth) finalHall = CarveFinalHall(m);
+            if (branch == 0 && depth == Rules.MaxDepth) finalHall = CarveFinalHall(m);
             else
             {
                 var first = MakeDesign(style, true);
@@ -75,11 +79,12 @@ namespace Icosa
             CleanDoors(m);
             AddLakes(m, depth);
             if (!PlaceStairs(m, finalHall)) { if (!force) return null; }
+            if (branch != 0 && m.IsBottom) SetupSanctum(m);
             Decorate(m, finalHall);
             AddVault(m);
             SecretAndLocked(m);
             LightRooms(m);
-            if (depth == Rules.MaxDepth) SetupFinal(m, finalHall);
+            if (finalHall != null) SetupFinal(m, finalHall);
             Spawn.Populate(m);
             return m;
         }
@@ -100,10 +105,42 @@ namespace Icosa
                 <= 14 => (new Color(170, 80, 55), new Color(64, 22, 16), new Color(120, 90, 80)),
                 _ => (new Color(220, 190, 120), new Color(50, 30, 30), new Color(130, 110, 90)),
             };
+            if (m.Branch != 0)
+            {
+                var dd = WorldDb.Get(m.Branch);
+                (wf, wb, ff) = (dd.WallFg, dd.WallBg, dd.FloorFg);
+            }
             m.WallFg = wf;
             m.WallBg = wb;
             m.FloorFg = ff;
             m.Ambient = 1.0f;
+        }
+
+        static void SetupSanctum(Map m)
+        {
+            var dd = WorldDb.Get(m.Branch);
+            var dist = Path.DistMap(m, new[] { m.Up }, (x, y) => Pass(m, x, y));
+            int Far(Room r) => r.Cells.Where(c => dist[c.X, c.Y] != int.MaxValue).Select(c => dist[c.X, c.Y]).DefaultIfEmpty(-1).Max();
+            var room = m.Rooms.Where(r => r.Cells.Count >= 12 && !r.Cells.Contains(m.Up) && Far(r) > 0).OrderByDescending(Far).FirstOrDefault()
+                ?? m.Rooms.Where(r => !r.Cells.Contains(m.Up)).OrderByDescending(r => r.Cells.Count).FirstOrDefault() ?? m.Rooms[0];
+            room.Theme = "sanctum";
+            room.Lit = true;
+            var c = room.Cells.Contains(room.Center) ? room.Center : room.Cells[room.Cells.Count / 2];
+            PlaceCorners(m, room, Tile.Brazier, true);
+            var boss = new Monster(MonsterDb.Get(dd.Boss)) { Pos = c, Home = c, Sleeping = true };
+            boss.Inv.Add(Spawn.RandomItem(m.Depth + 4, dd.Prize));
+            boss.Inv.Add(Spawn.Gold(m.Depth * 8));
+            m.Monsters.Add(boss);
+            var spot = room.Cells.Where(p => p != c && m.T[p.X, p.Y] == Tile.Floor).OrderByDescending(p => Path.Cheb(p, c)).FirstOrDefault();
+            if (spot != Point.Zero) m.Drop(Spawn.MakeChest(m.Depth + 3), spot);
+            var e = room.Cells.FirstOrDefault(p => p != c && p != spot && m.T[p.X, p.Y] == Tile.Floor);
+            if (e != Point.Zero) m.Engravings[e] = dd.Branch switch
+            {
+                1 => "TOLL FOR NO ONE. — the Bellwright's mark, scratched under a thousand others",
+                2 => "Every mouth is a seed. Every seed is a mouth.",
+                _ => "You are here. You are always here. That is the problem with maps.",
+            };
+            m.Feeling = dd.Feeling;
         }
 
         static Rectangle Bounds(IEnumerable<Point> pts)
@@ -380,8 +417,15 @@ namespace Icosa
         {
             int lakes;
             Tile liquid;
-            switch (depth)
+            switch (m.Branch != 0 ? -1 : depth)
             {
+                case -1:
+                    {
+                        var dd = WorldDb.Get(m.Branch);
+                        lakes = Rng.Range(dd.Lakes / 2, dd.Lakes);
+                        liquid = dd.Liquid == Tile.Chasm && m.NoFall ? Tile.DeepWater : dd.Liquid;
+                        break;
+                    }
                 case 7: lakes = 6; liquid = Tile.DeepWater; break;
                 case 13: case 14: lakes = 4; liquid = Tile.Lava; break;
                 case 9: case 11: lakes = 3; liquid = Tile.Chasm; break;
@@ -439,7 +483,7 @@ namespace Icosa
             var dist = Path.DistMap(m, new[] { up }, (x, y) => Pass(m, x, y));
             m.Up = up;
             m.T[up.X, up.Y] = Tile.StairsUp;
-            if (m.Depth < Rules.MaxDepth)
+            if (!m.IsBottom)
             {
                 var far = floors.Where(p => dist[p.X, p.Y] != int.MaxValue && p != up).OrderByDescending(p => dist[p.X, p.Y]).Take(12).ToList();
                 if (far.Count == 0) return false;
@@ -523,6 +567,9 @@ namespace Icosa
             if (d >= 5 && Rng.Chance(20)) themes.Add("statues");
             if (Rng.Chance(25)) themes.Add("lair");
             if (Rng.Chance(20)) themes.Add("flooded");
+            if (m.Branch == 1) themes.AddRange(new[] { "flooded", "flooded", "temple" });
+            if (m.Branch == 2) themes.AddRange(new[] { "garden", "garden", "lair" });
+            if (m.Branch == 3) themes.AddRange(new[] { "library", "statues", "oracle" });
             Rng.Shuffle(themes);
             foreach (var t in themes)
             {
@@ -537,7 +584,7 @@ namespace Icosa
                     if (m.T[p.X, p.Y] != Tile.Floor) continue;
                     int n = 0;
                     foreach (var q in m.Neighbors(p)) if (m.IsWallish(q.X, q.Y)) n++;
-                    if (d == 6 && Rng.Chance(14)) m.T[p.X, p.Y] = Rng.Chance(40) ? Tile.Moss : Tile.Grass;
+                    if ((d == 6 || m.Branch == 2) && Rng.Chance(14)) m.T[p.X, p.Y] = Rng.Chance(40) ? Tile.Moss : Tile.Grass;
                     else if (n >= 3 && Rng.Chance(10)) m.T[p.X, p.Y] = Tile.Rubble;
                     else if (Rng.Chance(3)) m.T[p.X, p.Y] = Tile.Grass;
                 }
@@ -715,7 +762,7 @@ namespace Icosa
 
         static void AddVault(Map m)
         {
-            if (!Rng.Chance(35) || m.Depth >= Rules.MaxDepth) return;
+            if (!Rng.Chance(35) || (m.Branch == 0 && m.Depth >= Rules.MaxDepth)) return;
             for (int t = 0; t < 200; t++)
             {
                 int w = Rng.Range(2, 3), h = 2;
@@ -771,7 +818,8 @@ namespace Icosa
                 {
                     m.T[d.X, d.Y] = Tile.DoorSecret;
                     var dist = Path.DistMap(m, new[] { m.Up }, (x, y) => m.Walkable(x, y) || m.T[x, y] is Tile.DoorClosed or Tile.DoorLocked or Tile.DeepWater);
-                    bool ok = m.Depth >= Rules.MaxDepth ? dist[m.Rooms[0].Center.X, m.Rooms[0].Center.Y] != int.MaxValue : dist[m.Down.X, m.Down.Y] != int.MaxValue;
+                    var goal = m.IsBottom ? (m.Rooms.FirstOrDefault(r => r.Theme == "sanctum") ?? m.Rooms[0]).Cells[0] : m.Down;
+                    bool ok = dist[goal.X, goal.Y] != int.MaxValue;
                     if (!ok) m.T[d.X, d.Y] = Tile.DoorClosed;
                     else secrets++;
                     continue;
@@ -792,7 +840,7 @@ namespace Icosa
                 if (r.Theme == "final") continue;
                 if (r.Theme == "cave" && !r.Lit) r.Lit = Rng.Chance(chance / 3);
                 else if (!r.Lit) r.Lit = Rng.Chance(chance);
-                if (r.Theme is "shop" or "temple" or "throne" or "vault") r.Lit = true;
+                if (r.Theme is "shop" or "temple" or "throne" or "vault" or "sanctum") r.Lit = true;
                 if (r.Theme is "crypt") r.Lit = false;
                 if (!r.Lit) continue;
                 foreach (var p in r.Cells)

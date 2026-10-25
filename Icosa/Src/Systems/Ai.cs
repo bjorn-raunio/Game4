@@ -369,6 +369,11 @@ namespace Icosa
                 if (m.Pos != m.Home) StepToward(m, m.Home);
                 return;
             }
+            if (m.Def.Has(MF.Townsfolk) && Path.Cheb(m.Pos, m.Home) > (m.Def.Id is "hedge_priest" or "innkeeper" || m.Proper?.StartsWith("the hermit") == true ? 1 : 6))
+            {
+                StepToward(m, m.Home);
+                return;
+            }
             if (Rng.Chance(30)) RandomStep(m);
         }
 

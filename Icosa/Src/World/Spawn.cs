@@ -101,7 +101,9 @@ namespace Icosa
             for (int i = 0; i < traps; i++)
             {
                 var p = m.RandomFloor(q => (m.T[q.X, q.Y] == Tile.Floor || m.T[q.X, q.Y] == Tile.Corridor) && Path.Cheb(q, m.Up) > 4 && m.ShopAt(q) == null && !m.Traps.ContainsKey(q));
-                m.Traps[p] = new Trap { Pos = p, T = RandomTrap(d) };
+                var tt = RandomTrap(d);
+                if (tt == TrapT.Trapdoor && m.NoFall) tt = TrapT.Pit;
+                m.Traps[p] = new Trap { Pos = p, T = tt };
             }
 
             if (d > 1 && d < Rules.MaxDepth && Rng.Chance(30))
@@ -113,6 +115,37 @@ namespace Icosa
                 DropAt(m, Gold(d * 2), p);
                 m.Engravings[p] = "Here lies an adventurer. " + Lore.Epitaph();
             }
+        }
+
+        public static void PopulateTown(Map m, TownDef t)
+        {
+            foreach (var shop in m.Shops) StockShop(m, shop);
+            var trades = new[] { "lamplighter", "cooper", "miller", "goatherd", "chandler", "tinker", "gravedigger", "bell-founder", "weaver", "beekeeper", "wick-trimmer", "dicewright" };
+            string Folk() => Lore.RandomName(Rng.Pick(new[] { Race.Human, Race.Human, Race.Halfling, Race.Dwarf, Race.Gnome, Race.Elf })) + " the " + Rng.Pick(trades);
+            foreach (var r in m.Rooms)
+            {
+                var c = r.Cells.FirstOrDefault(q => m.T[q.X, q.Y] is Tile.Altar or Tile.Brazier);
+                switch (r.Theme)
+                {
+                    case "temple":
+                        PlaceMonster(m, MonsterDb.Get("hedge_priest"), c, false);
+                        break;
+                    case "inn":
+                        if (PlaceMonster(m, MonsterDb.Get("innkeeper"), c, false) is Monster inn) inn.Proper = Lore.RandomName(Race.Halfling) + ", keeper of " + t.Inn;
+                        break;
+                    case "oracle":
+                        if (PlaceMonster(m, MonsterDb.Get("villager"), Rng.Pick(r.Cells), false) is Monster hermit) hermit.Proper = "the hermit of the Nine Clocks";
+                        break;
+                    case "house":
+                        if (Rng.Chance(40)) DropAt(m, RandomItem(1, Rng.Chance(70) ? IK.Food : IK.Light), Rng.Pick(r.Cells));
+                        if (Rng.Chance(35) && PlaceMonster(m, MonsterDb.Get("villager"), Rng.Pick(r.Cells), false) is Monster home) home.Proper = Folk();
+                        break;
+                }
+            }
+            var town = m.Places[0].R;
+            for (int i = 0; i < t.Folk; i++)
+                if (PlaceMonster(m, MonsterDb.Get("villager"), m.RandomFloor(q => town.Contains(q) && m.T[q.X, q.Y] is Tile.Road or Tile.Meadow or Tile.TallGrass), false) is Monster v) v.Proper = Folk();
+            for (int i = 0; i < t.Watch; i++) PlaceMonster(m, MonsterDb.Get("watchman"), m.RandomFloor(q => town.Contains(q) && m.T[q.X, q.Y] == Tile.Road), false);
         }
 
         static TrapT RandomTrap(int d)
@@ -307,12 +340,12 @@ namespace Icosa
                     "deli" => Rng.Chance(85) ? IK.Food : IK.Light,
                     _ => null,
                 };
-                var it = RandomItem(m.Depth + 1, kind);
+                var it = RandomItem((s.Level > 0 ? s.Level : m.Depth) + 1, kind);
                 if (it.Def.Kind == IK.Ammo) it.Count = Math.Max(it.Count, 10);
                 it.Price = Math.Max(1, it.Value);
                 m.Drop(it, p);
             }
-            m.Feeling ??= "You hear the chime of a distant shop bell.";
+            if (!m.Wild) m.Feeling ??= "You hear the chime of a distant shop bell.";
         }
     }
 }

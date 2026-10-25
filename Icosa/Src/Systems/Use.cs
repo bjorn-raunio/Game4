@@ -388,7 +388,7 @@ namespace Icosa
                         var d = Path.Step(p.Pos, target);
                         if (d == Point.Zero)
                         {
-                            if (M.Depth < Rules.MaxDepth - 1 && M.T[p.Pos.X, p.Pos.Y] is Tile.Floor or Tile.Corridor) { Dm.Msg("{brown}You dig a hole through the floor... you fall through!{/}"); Learn(it); Dm.EnterLevel(M.Depth + 1, Dm.Arrival.Fall); Dm.PlayerActed(); return; }
+                            if (!M.NoFall && M.T[p.Pos.X, p.Pos.Y] is Tile.Floor or Tile.Corridor) { Dm.Msg("{brown}You dig a hole through the floor... you fall through!{/}"); Learn(it); Dm.EnterLevel(M.Depth + 1, Dm.Arrival.Fall); Dm.PlayerActed(); return; }
                             Dm.Msg("The floor here is too hard to dig in.");
                             break;
                         }
@@ -822,7 +822,35 @@ namespace Icosa
             var t = M.T[pos.X, pos.Y];
             if (t == Tile.Throne) { Throne(); return; }
             if (t == Tile.OracleDie || M.Neighbors(pos).Any(q => M.T[q.X, q.Y] == Tile.OracleDie)) { Oracle(); return; }
+            if (M.Neighbors(pos).Any(q => M.T[q.X, q.Y] == Tile.Bell)) { RingBell(); return; }
             Dm.Msg(t == Tile.Altar ? "You sit on the altar. That seems disrespectful." : "Having fun sitting on the floor?");
+        }
+
+        static void RingBell()
+        {
+            var p = P;
+            Synth.Play(Sfx.Holy, 0.7f, -0.4f);
+            Dm.Noise(p.Pos, 20);
+            var ov = Dm.Levels[0];
+            var from = M.Wild ? p.Pos : ov.Up;
+            var unknown = ov.Places.Where(pl => !ov.Seen[pl.At.X, pl.At.Y]).OrderBy(pl => Path.Cheb(pl.At, from)).FirstOrDefault();
+            if (unknown != null)
+            {
+                Wild.Reveal(ov, unknown.R, 2);
+                Dm.Msg("{gold}You strike the hollow bell with your palm. It rings with no clapper, and far to the " + Dm.Compass(from, unknown.At) + " another bell answers.{/} {dim}You know now where to find " + unknown.Name + ".{/}");
+                Dm.PlayerActed();
+            }
+            else if (M.Wild && Rng.Chance(40))
+            {
+                Dm.Msg("{bad}The bell rings, and something in the Weald answers it with a howl.{/}", true);
+                Wild.Begin(M.T[p.Pos.X, p.Pos.Y]);
+                Dm.PlayerActed();
+            }
+            else
+            {
+                Dm.Msg("The bell hums. Every bell in the Weald hums back. You already know where they all are.");
+                Dm.PlayerActed();
+            }
         }
 
         static void Throne()

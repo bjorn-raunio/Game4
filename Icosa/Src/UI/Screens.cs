@@ -243,7 +243,7 @@ namespace Icosa
                 C(9, p.ClassInfo.Name + ", lvl " + p.Level, Pal.Text);
                 var cause = Markup.Wrap(Dm.DeathPhrase(), 24);
                 for (int i = 0; i < Math.Min(3, cause.Count); i++) C(10 + i, cause[i], Pal.Text);
-                C(13, "on dungeon level " + Dm.Depth, Pal.Text);
+                C(13, Dm.Where(true), Pal.Text);
                 t.Center(y0 + 19, "{dim}\"" + epitaph + "\"{/}", Pal.Dim);
                 t.Center(y0 + 22, "Score: {gold}" + Dm.Score + "{/}   Turns: " + Dm.Turn + "   Deepest level: " + p.DeepestDepth + "   Kills: " + p.Kills + "   Real time: " + Dm.PlayTime(), Pal.Text);
                 t.Center(y0 + 24, "{dim}Your possessions, now identified:{/}", Pal.Text);
@@ -324,6 +324,7 @@ namespace Icosa
         }
 
         public static readonly List<Entry> Entries = new List<Entry>();
+        public static bool Disabled;
         static string FilePath => System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Icosa", "halloffame.txt");
 
         public static void Load()
@@ -348,10 +349,11 @@ namespace Icosa
             Entries.Add(new Entry
             {
                 Score = Dm.Score, Name = p.PName.Replace("|", ""), Race = p.RaceInfo.Name, Class = p.ClassInfo.Name, Level = p.Level, Depth = p.DeepestDepth,
-                Cause = Dm.Won ? "escaped with the Icosahedral Heart" : Dm.DeathPhrase().Replace("|", "") + (Dm.Retired ? "" : " on level " + Dm.Depth), Date = DateTime.Now.ToString("yyyy-MM-dd"), Won = Dm.Won,
+                Cause = Dm.Won ? "escaped with the Icosahedral Heart" : Dm.DeathPhrase().Replace("|", "") + (Dm.Retired ? "" : " " + Dm.Where(false)), Date = DateTime.Now.ToString("yyyy-MM-dd"), Won = Dm.Won,
             });
             Entries.Sort((a, b) => b.Score.CompareTo(a.Score));
             if (Entries.Count > 50) Entries.RemoveRange(50, Entries.Count - 50);
+            if (Disabled) return;
             try
             {
                 Directory.CreateDirectory(System.IO.Path.GetDirectoryName(FilePath));

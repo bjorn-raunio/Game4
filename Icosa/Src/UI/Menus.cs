@@ -346,9 +346,12 @@ namespace Icosa
                 var tr = map.TrapAt(c);
                 if (tr != null && tr.Found) parts.Add("{red}" + Item.Article(tr.Name) + "{/}");
                 var td = map.Def(c);
-                if (map.T[c.X, c.Y] == Tile.DoorLocked && map.Seen[c.X, c.Y]) parts.Add(td.Name);
+                var hole = map.PlaceAt(c);
+                if (hole != null) parts.Add((parts.Count > 0 ? "at " : "") + (hole.Dungeon ? "the entrance to " + Markup.Hex(WorldDb.Get(hole.Branch).C) : "{gold}") + hole.Name + "{/}");
+                else if (map.T[c.X, c.Y] == Tile.DoorLocked && map.Seen[c.X, c.Y]) parts.Add(td.Name);
                 else parts.Add((parts.Count > 0 ? "on " : "") + Item.Article(td.Name));
-                if (full && td.Desc != null && m == null) parts.Add("\n{dim}" + td.Desc + "{/}");
+                if (full && hole != null && m == null) parts.Add("\n{dim}" + hole.Blurb + "{/}");
+                else if (full && td.Desc != null && m == null) parts.Add("\n{dim}" + td.Desc + "{/}");
                 if (map.Engravings.TryGetValue(c, out var eng) && full) parts.Add("\n{ink}Written here: \"" + eng + "\"{/}");
             }
             return string.Join(", ", parts).Replace(", \n", "\n");

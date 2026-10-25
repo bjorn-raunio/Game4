@@ -96,7 +96,7 @@ namespace Icosa
 
         static void FallIntoChasm()
         {
-            if (M.Depth >= Rules.MaxDepth) return;
+            if (M.IsBottom || M.Outdoors) return;
             Dm.Msg("{bad}You plunge into the chasm!{/}", true);
             if (P.Carrying("rope")) Dm.Msg("You manage to slow your fall with your rope.");
             else Combat.Damage(P, Rng.Roll(1, 6), Elem.Phys, null, "a long fall");
@@ -173,8 +173,53 @@ namespace Icosa
                         Dm.PlayerActed();
                         return true;
                     }
-                    prompt = "Really attack " + mon.The + "?";
                     var mref = mon;
+                    if (mon.Def.Has(MF.Townsfolk))
+                    {
+                        if (mon.Def.Id == "innkeeper")
+                        {
+                            int bed = 5 + p.Level * 3;
+                            if (p.Gold < bed) { Dm.Msg("{white}" + mon.Proper + " says: \"A bed and a bowl is " + bed + " gold, friend. The floor is free, but it's outside.\"{/}"); return true; }
+                            prompt = "A hot meal and a bed for the night, for " + bed + " gold?";
+                            confirmed = () =>
+                            {
+                                p.Gold -= bed;
+                                p.Hp = p.MaxHp;
+                                if (p.Nutrition < 1500) p.Nutrition = 1500;
+                                p.Remove(Status.Weakened);
+                                if (p.Caster) Magic.Memorize(p);
+                                Synth.Play(Sfx.Heal, 0.6f);
+                                Dm.Msg("{good}You eat a stew of something that was probably mutton and sleep like the dead. You wake rested" + (p.Caster ? ", your spells freshly memorized" : "") + ".{/}");
+                                Dm.PlayerActed(Dm.ActCost * 60);
+                            };
+                            return false;
+                        }
+                        if (mon.Def.Id == "hedge_priest" && (p.Hp < p.MaxHp || p.Has(Status.Poisoned) || p.Has(Status.Diseased) || p.Has(Status.Weakened)))
+                        {
+                            int fee = 10 + p.Level * 15;
+                            if (p.Gold < fee) { Dm.Msg("{white}The hedge-priest looks at your wounds, then at your purse. \"The gods ask " + fee + " gold. The gods are patient, but I am hungry.\"{/}"); return true; }
+                            prompt = "The hedge-priest offers healing for a donation of " + fee + " gold. Accept?";
+                            confirmed = () =>
+                            {
+                                p.Gold -= fee;
+                                p.Hp = p.MaxHp;
+                                foreach (var s in new[] { Status.Poisoned, Status.Diseased, Status.Weakened, Status.Blind, Status.Confused }) p.Remove(s);
+                                Synth.Play(Sfx.Holy);
+                                Dm.Msg("{holy}The hedge-priest lays a warm hand on your brow. Your wounds close. \"Go carefully. Or at least go slowly.\"{/}");
+                                Dm.PlayerActed();
+                            };
+                            return false;
+                        }
+                        mon.Pos = p.Pos;
+                        p.Pos = to;
+                        string who = mon.Proper != null ? char.ToUpper(mon.Proper[0]) + mon.Proper.Substring(1) : mon.TheCap;
+                        if (mon.Def.Id == "watchman" || Rng.Chance(50)) Dm.Msg("{white}" + who + " says: \"" + (mon.Def.Id == "hedge_priest" ? "You look whole. Come back when you aren't." : mon.Def.Id == "watchman" ? "Keep your lantern lit and your blade sharp. The dead don't knock." : WorldDb.Gossip()) + "\"{/}");
+                        else Dm.Msg("{dim}You step around " + who + ".{/}");
+                        AfterMove();
+                        Dm.PlayerActed();
+                        return true;
+                    }
+                    prompt = "Really attack " + mon.The + "?";
                     confirmed = () => { mref.Peaceful = false; Combat.PlayerMelee(mref); Dm.PlayerActed(); };
                     return false;
                 }
@@ -235,6 +280,7 @@ namespace Icosa
         {
             var p = P;
             var from = p.Pos;
+            Dm.Travelled = M.Wild;
             p.Pos = to;
             if (p.Has(Status.Hidden) && M.Lum(to.X, to.Y) > 0.5f && !Rng.Chance(p.ThiefSkills[3])) { p.Remove(Status.Hidden); Dm.Msg("{dim}You step out of the shadows.{/}"); }
             AfterMove();
@@ -246,6 +292,7 @@ namespace Icosa
             var p = P;
             var pos = p.Pos;
             var t = M.T[pos.X, pos.Y];
+            if ((M.Town || M.Encounter) && (pos.X == 0 || pos.Y == 0 || pos.X == Map.W - 1 || pos.Y == Map.H - 1)) { Dm.LeaveLocal(); return; }
             var trap = M.TrapAt(pos);
             if (trap != null && !p.Has(Status.Levitate)) Traps.PlayerTrigger(trap);
             if (Dm.GameOver || M != Dm.Map || p.Pos != pos) return;
@@ -258,8 +305,11 @@ namespace Icosa
             else if (items.Count > 1) Dm.Msg("There are " + (items.Count > 4 ? "many" : "several") + " objects here. {dim}(g to pick up, : to look){/}");
             if (M.Engravings.TryGetValue(pos, out var eng)) Dm.Msg("{ink}Something is written here: \"" + eng + "\"{/}");
             var def = M.Def(pos);
-            if (def.Feature && t != Tile.StairsDown && t != Tile.StairsUp) Dm.Msg("{dim}There is " + Item.Article(def.Name) + " here.{/}");
-            if (t == Tile.StairsDown) Dm.Msg("{dim}There is a staircase down here. (>){/}");
+            var site = M.PlaceAt(pos);
+            if (def.Feature && t != Tile.StairsDown && t != Tile.StairsUp && site == null) Dm.Msg("{dim}There is " + Item.Article(def.Name) + " here.{/}");
+            if (site != null && site.Dungeon) Dm.Msg("{gold}The entrance to " + site.Name + ".{/} {dim}" + site.Blurb + " (>){/}");
+            else if (site != null) Dm.Msg("{gold}" + WorldDb.Cap(site.Name) + ".{/} {dim}" + site.Blurb + " (> to enter){/}");
+            else if (t == Tile.StairsDown) Dm.Msg("{dim}There is a staircase down here. (>){/}");
             if (t == Tile.StairsUp) Dm.Msg("{dim}There is a staircase up here. (<){/}");
             var shop = M.ShopAt(pos);
             var prevShop = M.Shops.FirstOrDefault(s => s.Door == pos);
@@ -662,17 +712,34 @@ namespace Icosa
             var t = M.T[p.Pos.X, p.Pos.Y];
             if (down)
             {
-                if (t != Tile.StairsDown) { Dm.Msg("You can't go down here."); return; }
+                var site = M.PlaceAt(p.Pos);
+                if (t != Tile.StairsDown && site == null) { Dm.Msg("You can't go down here."); return; }
+                if (site != null && !site.Dungeon)
+                {
+                    Synth.Play(Sfx.Door, 0.6f);
+                    Dm.Msg("You walk into " + site.Name + ".");
+                    Dm.EnterLevel(0, Dm.Arrival.Down, site.Branch);
+                    Dm.PlayerActed();
+                    return;
+                }
                 if (p.Burden >= 3) { Dm.Msg("You are carrying too much to climb."); return; }
                 Synth.Play(Sfx.Stairs);
-                Dm.EnterLevel(M.Depth + 1, Dm.Arrival.Down);
+                var hole = M.DungeonAt(p.Pos);
+                if (M.Wild && hole != null)
+                {
+                    var dd = WorldDb.Get(hole.Branch);
+                    Dm.Msg("You descend into " + dd.Name + ".");
+                    Dm.EnterLevel(dd.Top, Dm.Arrival.Down, dd.Branch);
+                }
+                else Dm.EnterLevel(M.Depth + 1, Dm.Arrival.Down);
                 Dm.PlayerActed();
             }
             else
             {
                 if (t != Tile.StairsUp) { Dm.Msg("You can't go up here."); return; }
                 Synth.Play(Sfx.Stairs);
-                Dm.EnterLevel(M.Depth - 1, Dm.Arrival.Up);
+                if (M.Depth == WorldDb.Get(M.Branch).Top) Dm.EnterLevel(0, Dm.Arrival.Up, 0);
+                else Dm.EnterLevel(M.Depth - 1, Dm.Arrival.Up);
                 Dm.PlayerActed();
             }
         }
@@ -688,6 +755,7 @@ namespace Icosa
         {
             var p = P;
             p.RestTurns++;
+            if (M.Wild) Dm.Travelled = true;
             Traps.Search(false);
             if (p.RestTurns >= 120 && p.Caster && !p.Memorized.SequenceEqual(p.Plan))
             {
@@ -850,7 +918,7 @@ namespace Icosa
                     if (frontier) goals.Add(new Point(x, y));
                 }
             foreach (var it in M.Items)
-                if (M.Seen[it.Pos.X, it.Pos.Y] && !Visited.Contains((M.Depth, it.Pos)) && it.Price == 0 && it.Def.Kind != IK.Corpse) goals.Add(it.Pos);
+                if (M.Seen[it.Pos.X, it.Pos.Y] && M.Walkable(it.Pos) && !Visited.Contains((M.Key, it.Pos)) && it.Price == 0 && it.Def.Kind != IK.Corpse) goals.Add(it.Pos);
             if (goals.Count == 0) return null;
             return Path.DistMap(M, goals, (x, y) => (M.Seen[x, y] && (M.Walkable(x, y) || M.T[x, y] == Tile.DoorClosed) && !(M.TrapAt(new Point(x, y))?.Found ?? false) && M.T[x, y] != Tile.Chasm && M.T[x, y] != Tile.Lava));
         }
@@ -865,7 +933,7 @@ namespace Icosa
             int bd = dist[p.X, p.Y];
             foreach (var q in M.Neighbors(p))
             {
-                if (dist[q.X, q.Y] < bd && (M.MonsterAt(q) == null || M.MonsterAt(q).Ally)) { bd = dist[q.X, q.Y]; best = q; }
+                if (dist[q.X, q.Y] < bd && (M.MonsterAt(q) == null || M.MonsterAt(q).Ally || (M.MonsterAt(q).Peaceful && M.MonsterAt(q).Def.Has(MF.Townsfolk) && M.MonsterAt(q).Def.Id is not ("hedge_priest" or "innkeeper")))) { bd = dist[q.X, q.Y]; best = q; }
             }
             return best == p ? (Point?)null : best;
         }

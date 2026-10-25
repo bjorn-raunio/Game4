@@ -65,7 +65,7 @@ namespace Icosa
                     Magic.TeleportActor(p, null);
                     break;
                 case TrapT.Trapdoor:
-                    if (M.Depth >= Rules.MaxDepth - 1) { Dm.Msg("A trap door opens, but it is jammed shut."); break; }
+                    if (M.NoFall) { Dm.Msg("A trap door opens, but it is jammed shut."); break; }
                     Dm.Msg("{bad}A trap door opens up under you!{/}", true);
                     Combat.Damage(p, Rng.Roll(1, 4), Elem.Phys, null, "a fall");
                     Dm.EnterLevel(M.Depth + 1, Dm.Arrival.Fall);

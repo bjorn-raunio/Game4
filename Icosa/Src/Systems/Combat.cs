@@ -364,6 +364,13 @@ namespace Icosa
                     for (int y = 0; y < Map.H; y++)
                         if (map.T[x, y] == Tile.BoneVeil) map.T[x, y] = Tile.Rubble;
             }
+            var lair = WorldDb.Dungeons.FirstOrDefault(x => x.Boss == d.Id);
+            if (lair != null)
+            {
+                Dm.Msg("{gold}" + lair.Slain + "{/}", true);
+                Dm.Achievements.Add("Conquered " + lair.Name);
+                Synth.Play(Sfx.Thunder);
+            }
             if (d.Id == "beholder" || d.Id == "balor" || d.Id.StartsWith("young_")) Dm.Achievements.Add("Slew " + m.A);
             if (d.Id == "balor")
             {
@@ -664,7 +671,7 @@ namespace Icosa
                     }
                     break;
                 case AtkSp.Smudge:
-                    Dm.Msg("{ink}The ink wraith's touch smears your memory of the map like wet ink!{/}", true);
+                    Dm.Msg("{ink}" + m.TheCap + "'s touch smears your memory of the map like wet ink!{/}", true);
                     Dm.Map.Smudge(p.Pos, 25);
                     break;
                 case AtkSp.Flux:

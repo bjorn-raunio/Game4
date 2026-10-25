@@ -220,6 +220,21 @@ namespace Icosa
             M("hammer", "spiritual hammer", ')', C(255, 240, 160), "3", 2, 18, 99, 0, "1d6+1 strike", MF.Fly | MF.Mindless | MF.NoCorpse | MF.NeedMagic, "A hammer of golden light that swings itself.").Mor(12);
             M("shopkeeper", "shopkeeper", '@', C(240, 240, 240), "12", 0, 15, 99, 0, "4d6 hit;4d6 hit", Humanoid | MF.Peaceful | MF.Shopkeeper | MF.Unique,
                 "A merchant who has survived in the dungeon for decades. Ask yourself how.").Casts(30, SpellId.MagicMissile, SpellId.Fireball, SpellId.Haste).Mor(12).Al(Align.LN);
+            M("villager", "villager", '@', C(190, 170, 130), "1", 10, 12, 99, 0, "1d3 hit", Humanoid | MF.Peaceful | MF.Townsfolk | MF.Coward,
+                "A Weald-dweller in a smoke-stained coat, carrying a lantern in broad daylight. Habit, they say. Or just in case.").Mor(5).Al(Align.NG);
+            M("watchman", "lantern-watch", '@', C(230, 190, 90), "3", 5, 12, 99, 0, "1d8 hit", Humanoid | MF.Peaceful | MF.Townsfolk,
+                "A village guard with a halberd in one hand and a hooded lantern in the other. Their job is to see the dead coming before the dead see them.").Mor(11).Al(Align.LG);
+            M("innkeeper", "innkeeper", '@', C(220, 160, 110), "2", 8, 9, 99, 0, "1d4 ladle", Humanoid | MF.Peaceful | MF.Townsfolk,
+                "A round, flour-dusted publican who has heard every story that ever came back up out of a hole, and charges extra for the true ones.").Mor(8).Al(Align.NG);
+            M("hedge_priest", "hedge-priest", '@', C(230, 230, 255), "6", 6, 9, 99, 0, "1d6 mace", Humanoid | MF.Peaceful | MF.Townsfolk,
+                "A priest of no particular god, who tends the chapel altar and the wounds of anyone who comes back up. For a small donation.").Casts(30, SpellId.CureLight, SpellId.Command).Mor(10).Al(Align.NG);
+
+            M("bellwright", "the Drowned Bellwright", 'Z', C(120, 200, 210), "6+4", 4, 9, 99, 0, "2d6 clang stun@30;1d8 grasp", MF.Undead | MF.Unique | MF.Evil | MF.Hands | MF.Swim | MF.ResCold | MF.FearAura,
+                "The founder who cast the Belfry's bells, drowned with his church and still working. A bronze bell hangs where his head should be, and it rings when he hits you.", Size.Large).Turn(8).Mor(12).Exp(700);
+            M("mother_molar", "Mother Molar", 'h', C(230, 210, 170), "8+2", 3, 12, 99, 0, "1d10 bite bleed;1d6 claw;1d6 claw", MF.Unique | MF.Evil | MF.Hands | MF.Warm | MF.Regen,
+                "A root-hag who plants teeth and harvests mouths. Her own smile runs from ear to ear, and then keeps going round the back.", Size.Large).Casts(30, SpellId.Web, SpellId.StinkingCloud, SpellId.Fear).Mor(12).Exp(1400);
+            M("unfinished_map", "the Unfinished Map", '¶', C(170, 150, 255), "10+3", 2, 15, 99, 0, "2d6 smear smudge;1d8 cut bleed", MF.Unique | MF.Evil | MF.Fly | MF.ResSleep | MF.ResPoison | MF.NoCorpse | MF.NeedMagic | MF.Displace,
+                "The cartographer's last chart, which grew too large to finish and too hungry to fold. It is drawing you into its margins. Where it touches you, you forget where you have been.", Size.Large).Casts(40, SpellId.Blink, SpellId.LightningBolt, SpellId.Slow, SpellId.Darkness).Glows(C(150, 130, 255), 2).Mor(12).Exp(2600);
         }
 
         public static string PluralName(MonsterDef d)

@@ -891,7 +891,7 @@ namespace Icosa
                         var c = M.Items.FirstOrDefault(i => i.Def.Kind == IK.Corpse && Path.Cheb(i.Pos, caster.Pos) <= 2);
                         if (c == null) { Dm.Msg("There are no dead nearby to speak with."); return true; }
                         Dm.Msg("{purple}" + Lore.DeathTale() + "{/}");
-                        if (M.Depth < Rules.MaxDepth)
+                        if (!M.IsBottom)
                         {
                             M.Seen[M.Down.X, M.Down.Y] = true;
                             M.MemCh[M.Down.X, M.Down.Y] = '>';
@@ -963,15 +963,15 @@ namespace Icosa
                     return true;
                 case SpellId.WordOfRecall:
                     {
-                        int dest = M.Depth > 1 ? 1 : p.DeepestDepth;
-                        if (dest == M.Depth) { Dm.Msg("Your god sees no need to move you."); return true; }
+                        int dest = M.Depth > 0 ? 0 : p.DeepestDepth;
+                        if (dest == M.Depth && M.Branch == 0) { Dm.Msg("Your god sees no need to move you."); return true; }
                         Dm.Msg("{holy}You are snatched away in a flash of light!{/}");
-                        Dm.EnterLevel(dest, dest == 1 ? Dm.Arrival.Down : Dm.Arrival.Teleport);
+                        Dm.EnterLevel(dest, dest == 0 ? Dm.Arrival.Start : Dm.Arrival.Teleport, 0);
                         return true;
                     }
                 case SpellId.FindPath:
                     {
-                        if (M.Depth >= Rules.MaxDepth) { Dm.Msg("The path ends here. It always did."); return true; }
+                        if (M.IsBottom) { Dm.Msg("The path ends here. It always did."); return true; }
                         var dist = Path.DistMap(M, new[] { M.Down }, (x, y) => M.Walkable(x, y) || M.T[x, y] is Tile.DoorClosed or Tile.DoorLocked or Tile.DoorSecret);
                         var cur = caster.Pos;
                         int guard = 0;
@@ -1030,7 +1030,7 @@ namespace Icosa
                             {
                                 if (!Map.InB(x, y) || x <= 0 || y <= 0 || x >= Map.W - 1 || y >= Map.H - 1) continue;
                                 if (M.T[x, y] == Tile.Wall && Rng.Chance(20)) M.T[x, y] = Tile.Rubble;
-                                else if (M.T[x, y] == Tile.Floor && Rng.Chance(3) && M.ActorAt(new Point(x, y)) == null && M.Depth < Rules.MaxDepth) M.T[x, y] = Tile.Chasm;
+                                else if (M.T[x, y] == Tile.Floor && Rng.Chance(3) && M.ActorAt(new Point(x, y)) == null && !M.NoFall) M.T[x, y] = Tile.Chasm;
                             }
                         return true;
                     }

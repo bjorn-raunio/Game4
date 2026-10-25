@@ -69,6 +69,7 @@ namespace Icosa
         Pack = 1L << 46,
         Ally = 1L << 47,
         EatsMetal = 1L << 48,
+        Townsfolk = 1L << 49,
     }
 
     public enum Status
