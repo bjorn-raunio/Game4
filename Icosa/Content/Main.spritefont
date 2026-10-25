@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<XnaContent xmlns:Graphics="Microsoft.Xna.Framework.Content.Pipeline.Graphics">
+  <Asset Type="Graphics:FontDescription">
+    <FontName>Consolas</FontName>
+    <Size>15</Size>
+    <Spacing>0</Spacing>
+    <UseKerning>true</UseKerning>
+    <Style>Regular</Style>
+    <DefaultCharacter>?</DefaultCharacter>
+    <CharacterRegions>
+      <CharacterRegion><Start>&#32;</Start><End>&#126;</End></CharacterRegion>
+      <CharacterRegion><Start>&#161;</Start><End>&#255;</End></CharacterRegion>
+      <CharacterRegion><Start>&#913;</Start><End>&#969;</End></CharacterRegion>
+      <CharacterRegion><Start>&#8211;</Start><End>&#8212;</End></CharacterRegion>
+      <CharacterRegion><Start>&#8216;</Start><End>&#8221;</End></CharacterRegion>
+      <CharacterRegion><Start>&#8226;</Start><End>&#8226;</End></CharacterRegion>
+      <CharacterRegion><Start>&#8230;</Start><End>&#8230;</End></CharacterRegion>
+      <CharacterRegion><Start>&#8804;</Start><End>&#8805;</End></CharacterRegion>
+      <CharacterRegion><Start>&#8592;</Start><End>&#8597;</End></CharacterRegion>
+      <CharacterRegion><Start>&#8730;</Start><End>&#8730;</End></CharacterRegion>
+      <CharacterRegion><Start>&#8734;</Start><End>&#8734;</End></CharacterRegion>
+      <CharacterRegion><Start>&#8745;</Start><End>&#8745;</End></CharacterRegion>
+      <CharacterRegion><Start>&#8776;</Start><End>&#8776;</End></CharacterRegion>
+      <CharacterRegion><Start>&#8801;</Start><End>&#8801;</End></CharacterRegion>
+      <CharacterRegion><Start>&#8992;</Start><End>&#8993;</End></CharacterRegion>
+      <CharacterRegion><Start>&#9472;</Start><End>&#9580;</End></CharacterRegion>
+      <CharacterRegion><Start>&#9600;</Start><End>&#9619;</End></CharacterRegion>
+      <CharacterRegion><Start>&#9632;</Start><End>&#9633;</End></CharacterRegion>
+      <CharacterRegion><Start>&#9650;</Start><End>&#9650;</End></CharacterRegion>
+      <CharacterRegion><Start>&#9658;</Start><End>&#9658;</End></CharacterRegion>
+      <CharacterRegion><Start>&#9660;</Start><End>&#9660;</End></CharacterRegion>
+      <CharacterRegion><Start>&#9668;</Start><End>&#9668;</End></CharacterRegion>
+      <CharacterRegion><Start>&#9674;</Start><End>&#9675;</End></CharacterRegion>
+      <CharacterRegion><Start>&#9679;</Start><End>&#9679;</End></CharacterRegion>
+      <CharacterRegion><Start>&#9824;</Start><End>&#9830;</End></CharacterRegion>
+      <CharacterRegion><Start>&#9834;</Start><End>&#9835;</End></CharacterRegion>
+    </CharacterRegions>
+  </Asset>
+</XnaContent>
