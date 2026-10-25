@@ -113,6 +113,117 @@ namespace Icosa
             Console.Write(sb.ToString());
         }
 
+        public static void World(string[] args)
+        {
+            int gi = Array.IndexOf(args, "--worldgen");
+            int n = gi + 1 < args.Length && int.TryParse(args[gi + 1], out var k) ? k : 20;
+            string file = gi + 2 < args.Length && !args[gi + 2].StartsWith("--") ? args[gi + 2] : "worldgen.txt";
+            int si = Array.IndexOf(args, "--seed");
+            int seed0 = si >= 0 && si + 1 < args.Length ? int.Parse(args[si + 1]) : 1;
+            var tiles = new Dictionary<Tile, double>();
+            var sites = new Dictionary<string, Dictionary<string, int>>();
+            var dist = new Dictionary<string, List<int>>();
+            var dumps = new List<string>();
+            var errors = new List<string>();
+            double ms = 0, att = 0, fords = 0, filled = 0, lakes = 0, rivers = 0, valleys = 0;
+            var wild = new int[5];
+            int ok = 0;
+            Wild.FailWhy.Clear();
+            for (int i = 0; i < n; i++)
+            {
+                Rng.Init(seed0 + i);
+                try
+                {
+                    var sw = Stopwatch.StartNew();
+                    var m = Wild.Generate();
+                    ms += sw.Elapsed.TotalMilliseconds;
+                    ok++;
+                    att += Wild.Attempts;
+                    fords += Wild.Fords;
+                    valleys += Wild.Valleys;
+                    for (int x = 1; x < Map.W - 1; x++)
+                        for (int y = 1; y < Map.H - 1; y++)
+                            if (m.Walkable(x, y)) wild[Math.Min(4, (int)Wild.Wildness(m, new Point(x, y)))]++;
+                    filled += Wild.Filled;
+                    lakes += Wild.LakeCells;
+                    rivers += Wild.RiverCells;
+                    for (int x = 1; x < Map.W - 1; x++)
+                        for (int y = 1; y < Map.H - 1; y++)
+                            tiles[m.T[x, y]] = tiles.GetValueOrDefault(m.T[x, y]) + 1;
+                    var home = m.Places[0].At;
+                    foreach (var pl in m.Places)
+                    {
+                        var t = sites.TryGetValue(pl.Name, out var d) ? d : sites[pl.Name] = new Dictionary<string, int>();
+                        foreach (var q in m.Neighbors(pl.At).Concat(m.Neighbors(pl.At).SelectMany(m.Neighbors)).Distinct())
+                        {
+                            string name = Map.Defs[m.T[q.X, q.Y]].Name;
+                            t[name] = t.GetValueOrDefault(name) + 1;
+                        }
+                        (dist.TryGetValue(pl.Name, out var l) ? l : dist[pl.Name] = new List<int>()).Add(Math.Max(Math.Abs(pl.At.X - home.X), Math.Abs(pl.At.Y - home.Y) * 2));
+                    }
+                    if (dumps.Count < 4) dumps.Add($"seed {seed0 + i}:\n{Overland(m)}");
+                }
+                catch (Exception e)
+                {
+                    if (errors.Count < 20) errors.Add($"seed {seed0 + i}: {e.GetType().Name}: {e.Message}\n{e.StackTrace}");
+                }
+            }
+            var sb = new StringBuilder();
+            sb.AppendLine($"worldgen: {ok}/{n} overlands, base seed {seed0}, {ms / Math.Max(1, ok):0.0} ms, {att / Math.Max(1, ok):0.00} attempts");
+            sb.AppendLine($"per map: lake cells {lakes / Math.Max(1, ok):0.0}, river cells {rivers / Math.Max(1, ok):0.0}, fords {fords / Math.Max(1, ok):0.0}, hidden valleys {valleys / Math.Max(1, ok):0.00}, cells walled off {filled / Math.Max(1, ok):0.0}");
+            sb.AppendLine("walkable land by wildness 0-1/1-2/2-3/3-4/4+: " + string.Join(" ", wild.Select(v => $"{100.0 * v / Math.Max(1, wild.Sum()):0}%")));
+            sb.AppendLine("failed attempts: " + string.Join(", ", Wild.FailWhy.OrderByDescending(x => x.Value).Select(x => $"{x.Key} {x.Value}")));
+            sb.AppendLine();
+            double total = tiles.Values.Sum();
+            sb.AppendLine("terrain:");
+            foreach (var (t, v) in tiles.OrderByDescending(x => x.Value)) sb.AppendLine($"  {Map.Defs[t].Name,-16}{100 * v / total,6:0.0}%");
+            sb.AppendLine();
+            sb.AppendLine("sites (mean distance from home, then terrain within 2 squares, share of 24 cells):");
+            foreach (var (name, t) in sites)
+            {
+                double all = t.Values.Sum();
+                sb.AppendLine($"  {name,-38}{dist[name].Average(),5:0}  " + string.Join(" ", t.OrderByDescending(x => x.Value).Take(5).Select(x => $"{x.Key} {100 * x.Value / all:0}%")));
+            }
+            if (errors.Count > 0)
+            {
+                sb.AppendLine();
+                sb.AppendLine("exceptions:");
+                foreach (var e in errors) sb.AppendLine(e);
+            }
+            sb.AppendLine();
+            sb.AppendLine("^ mountain  n hills  . plains  f forest  F wildwood  \" marsh  ~ water  s ford  = road  # bridge  T town  > dungeon  b bell");
+            foreach (var d in dumps) sb.AppendLine(d);
+            File.WriteAllText(file, sb.ToString());
+        }
+
+        static string Overland(Map m)
+        {
+            var sb = new StringBuilder();
+            for (int y = 0; y < Map.H; y++)
+            {
+                for (int x = 0; x < Map.W; x++)
+                    sb.Append(m.T[x, y] switch
+                    {
+                        Tile.Mountain => '^',
+                        Tile.Hills => 'n',
+                        Tile.Plains => '.',
+                        Tile.Forest => 'f',
+                        Tile.Wildwood => 'F',
+                        Tile.Marsh => '"',
+                        Tile.DeepWater => '~',
+                        Tile.Shallow => 's',
+                        Tile.Road => '=',
+                        Tile.Bridge => '#',
+                        Tile.TownSite => 'T',
+                        Tile.StairsDown => '>',
+                        Tile.Bell => 'b',
+                        _ => '?',
+                    });
+                sb.AppendLine();
+            }
+            return sb.ToString();
+        }
+
         static double[] Measure(Map m, double ms)
         {
             Spawn.Chart(m);

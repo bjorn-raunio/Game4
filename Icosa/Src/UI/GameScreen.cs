@@ -930,7 +930,7 @@ namespace Icosa
                 string a = StatCell(p, (Stat)i), b = StatCell(p, (Stat)(i + 1));
                 t.PrintM(x + 1, row++, a + "  " + b, Pal.Text);
             }
-            t.PrintM(x + 1, row++, "{dim}Gold{/} {gold}" + p.Gold + "{/}   {dim}Depth{/} " + (M.Outdoors ? "surface" : M.Depth + "/" + p.DeepestDepth), Pal.Text);
+            t.PrintM(x + 1, row++, "{dim}Gold{/} {gold}" + p.Gold + "{/}   " + (M.Wild ? "{dim}Land{/} " + Wild.WildWord(Wild.Wildness(M, p.Pos)) : "{dim}Depth{/} " + (M.Outdoors ? "surface" : M.Depth + "/" + p.DeepestDepth)), Pal.Text);
             var wpn = p.Weapon;
             t.PrintM(x + 1, row++, "{dim}Wield{/} " + (wpn == null ? "bare hands" : wpn.Name(false, false)), Pal.Text, w - 2);
             var st = StatusList(p);

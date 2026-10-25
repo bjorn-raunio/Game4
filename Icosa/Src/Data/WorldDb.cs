@@ -8,7 +8,7 @@ namespace Icosa
     public class DungeonDef
     {
         public int Branch, Top, Bottom, Lakes, CaveChance;
-        public string Name, Short, Blurb, Boss, Feeling, Slain;
+        public string Name, Short, Blurb, Boss, Feeling, Slain, Site;
         public string[] Floors;
         public Color C, WallFg, WallBg, FloorFg;
         public Tile Liquid, Ring;
@@ -20,7 +20,7 @@ namespace Icosa
         public string Name, Blurb;
         public string[] Shops;
         public bool Temple, Oracle, Start, Walled;
-        public string Inn, Centre;
+        public string Inn, Centre, Site;
         public int Branch, W, H, Stock, Folk, Watch, Houses;
     }
 
@@ -32,12 +32,12 @@ namespace Icosa
         {
             new DungeonDef
             {
-                Branch = 0, Top = 1, Bottom = Rules.MaxDepth, Name = "the Tomb of the Twenty-Sided Heart", Short = "Tomb", C = new Color(255, 120, 160), Ring = Tile.Statue,
+                Branch = 0, Top = 1, Bottom = Rules.MaxDepth, Name = "the Tomb of the Twenty-Sided Heart", Short = "Tomb", Site = "lonehill", C = new Color(255, 120, 160), Ring = Tile.Statue,
                 Blurb = "A stair of black basalt spirals into the hill. Its steps are numbered one to twenty, then one to twenty again, all the way down. The air rising from it smells of candle smoke and old dice.",
             },
             new DungeonDef
             {
-                Branch = 1, Top = 2, Bottom = 4, Name = "the Drowned Belfry", Short = "Belfry", C = new Color(110, 190, 230), Ring = Tile.Shallow,
+                Branch = 1, Top = 2, Bottom = 4, Name = "the Drowned Belfry", Short = "Belfry", Site = "lake", C = new Color(110, 190, 230), Ring = Tile.Shallow,
                 Floors = new[] { "The Bell-Rope Stair", "The Nave Beneath the Lake", "The Clapper's Grave" },
                 WallFg = new Color(110, 150, 150), WallBg = new Color(26, 48, 54), FloorFg = new Color(90, 120, 125), Liquid = Tile.DeepWater, Lakes = 5, CaveChance = 20,
                 Boss = "bellwright", Prize = IK.Amulet,
@@ -47,7 +47,7 @@ namespace Icosa
             },
             new DungeonDef
             {
-                Branch = 2, Top = 4, Bottom = 6, Name = "the Orchard of Teeth", Short = "Orchard", C = new Color(230, 200, 150), Ring = Tile.Bones,
+                Branch = 2, Top = 4, Bottom = 6, Name = "the Orchard of Teeth", Short = "Orchard", Site = "forest", C = new Color(230, 200, 150), Ring = Tile.Bones,
                 Floors = new[] { "The Root Cellar", "The Gnawing Grove", "The Pit of First Fruit" },
                 WallFg = new Color(160, 110, 90), WallBg = new Color(58, 30, 26), FloorFg = new Color(120, 95, 80), Liquid = Tile.Shallow, Lakes = 2, CaveChance = 75,
                 Boss = "mother_molar", Prize = IK.Ring,
@@ -57,7 +57,7 @@ namespace Icosa
             },
             new DungeonDef
             {
-                Branch = 3, Top = 7, Bottom = 9, Name = "the Cartographer's Wound", Short = "Wound", C = new Color(170, 150, 255), Ring = Tile.Crystal,
+                Branch = 3, Top = 7, Bottom = 9, Name = "the Cartographer's Wound", Short = "Wound", Site = "hills", C = new Color(170, 150, 255), Ring = Tile.Crystal,
                 Floors = new[] { "The Margin", "The Folded Country", "Here Be Dragons" },
                 WallFg = new Color(120, 120, 190), WallBg = new Color(28, 26, 60), FloorFg = new Color(150, 135, 100), Liquid = Tile.Chasm, Lakes = 2, CaveChance = 35,
                 Boss = "unfinished_map", Prize = IK.Wand,
@@ -71,19 +71,19 @@ namespace Icosa
         {
             new TownDef
             {
-                Branch = 10, Name = "Lantern Hollow", Start = true, Walled = true, W = 64, H = 24, Stock = 1, Folk = 8, Watch = 3, Houses = 8, Centre = "well",
+                Branch = 10, Name = "Lantern Hollow", Site = "plains", Start = true, Walled = true, W = 64, H = 24, Stock = 1, Folk = 8, Watch = 3, Houses = 8, Centre = "well",
                 Temple = true, Inn = "the Wick and Waning", Shops = new[] { "general", "apothecary" },
                 Blurb = "A village of lamplighters. They keep a lantern burning in every window so the dead in the Tomb can find their way home, and so they can see them coming.",
             },
             new TownDef
             {
-                Branch = 11, Name = "Gallowmere Market", Walled = true, W = 80, H = 28, Stock = 4, Folk = 12, Watch = 4, Houses = 11, Centre = "vane",
+                Branch = 11, Name = "Gallowmere Market", Site = "river", Walled = true, W = 80, H = 28, Stock = 4, Folk = 12, Watch = 4, Houses = 11, Centre = "vane",
                 Inn = "the Hanged Weathercock", Shops = new[] { "armory", "scribe", "deli", "general", "apothecary" },
                 Blurb = "A market town built around an old gallows that now serves as a weathervane. Everything here is for sale, including the weather.",
             },
             new TownDef
             {
-                Branch = 12, Name = "the Hermitage of Nine Clocks", W = 34, H = 14, Stock = 7, Folk = 0, Houses = 1, Centre = "bell", Oracle = true, Shops = new[] { "curio" },
+                Branch = 12, Name = "the Hermitage of Nine Clocks", Site = "foothills", W = 34, H = 14, Stock = 7, Folk = 0, Houses = 1, Centre = "bell", Oracle = true, Shops = new[] { "curio" },
                 Blurb = "Nine clocks tick in a hermit's window, each set to a different hour. Every one of them is right somewhere.",
             },
         };

@@ -30,7 +30,7 @@ namespace Icosa
             Tile.Road or Tile.Bridge => 10,
             Tile.Forest or Tile.Hills => 25,
             Tile.Marsh => 35,
-            Tile.Wildwood => 40,
+            Tile.Wildwood or Tile.Shallow => 40,
             _ => 15,
         };
 
@@ -56,11 +56,17 @@ namespace Icosa
         {
             for (int attempt = 0; attempt < 80; attempt++)
             {
+                Attempts = attempt + 1;
                 var m = TryOverland(attempt > 50);
                 if (m != null) return m;
+                FailWhy[fail] = FailWhy.GetValueOrDefault(fail) + 1;
             }
             return TryOverland(true) ?? throw new InvalidOperationException("The Weald failed to generate: " + fail);
         }
+
+        public static int Fords, Filled, LakeCells, RiverCells, Attempts, Valleys;
+        public static readonly Dictionary<string, int> FailWhy = new Dictionary<string, int>();
+        static readonly Point[] Dirs4 = { new Point(1, 0), new Point(-1, 0), new Point(0, 1), new Point(0, -1) };
 
         static Map TryOverland(bool loose)
         {
@@ -68,66 +74,135 @@ namespace Icosa
             var h1 = Noise(16);
             var h2 = Noise(7);
             var h3 = Noise(3);
+            var wx = Noise(12);
+            var wy = Noise(12);
             var wet = Noise(10);
             var wood = Noise(8);
+            var raw = new float[W, H];
+            var elev = new float[W, H];
             for (int x = 0; x < W; x++)
                 for (int y = 0; y < H; y++)
                 {
+                    float sx = x + (wx[x, y] - 0.5f) * 18, sy = y + (wy[x, y] - 0.5f) * 9;
                     float e = Math.Min(Math.Min(x, W - 1 - x), Math.Min(y, H - 1 - y) * 2.2f);
-                    float h = h1[x, y] * 0.6f + h2[x, y] * 0.3f + h3[x, y] * 0.1f + Math.Max(0, (5 - e) / 5f) * 0.5f;
+                    raw[x, y] = Sample(h1, sx, sy) * 0.6f + Sample(h2, sx, sy) * 0.3f + h3[x, y] * 0.1f;
+                    elev[x, y] = raw[x, y] + Math.Max(0, (5 - e) / 5f) * 0.5f;
+                }
+            var lake = new bool[W, H];
+            var river = new bool[W, H];
+            var pool = new bool[W, H];
+            Hydro(raw, lake, river, pool);
+            var water = new List<Point>();
+            for (int x = 0; x < W; x++)
+                for (int y = 0; y < H; y++)
+                    if (lake[x, y] || river[x, y]) water.Add(new Point(x, y));
+            var near = Path.DistMap(m, water, (x, y) => true);
+            var rain = Shadow(raw);
+            for (int x = 0; x < W; x++)
+                for (int y = 0; y < H; y++)
+                {
+                    float e = elev[x, y];
+                    float prox = near[x, y] == int.MaxValue ? 0 : Math.Max(0, 1 - near[x, y] / 9f);
+                    float w = prox * 0.45f + rain[x, y] * 0.25f + wet[x, y] * 0.3f + (wood[x, y] - 0.5f) * 0.4f;
                     Tile t;
-                    if (h > 0.8f) t = Tile.Mountain;
-                    else if (h > 0.66f) t = Tile.Hills;
-                    else if (wet[x, y] > 0.8f && h < 0.55f) t = Tile.DeepWater;
-                    else if (wet[x, y] > 0.68f && h < 0.58f) t = Tile.Marsh;
-                    else if (wood[x, y] > 0.7f) t = Tile.Wildwood;
-                    else if (wood[x, y] > 0.53f) t = Tile.Forest;
+                    if (lake[x, y] || river[x, y]) t = Tile.DeepWater;
+                    else if (e > 0.8f) t = Tile.Mountain;
+                    else if (e > 0.66f) t = Tile.Hills;
+                    else if (pool[x, y] || (prox > 0.75f && w > 0.76f && e < 0.55f)) t = Tile.Marsh;
+                    else if (w > 0.7f) t = Tile.Wildwood;
+                    else if (w > 0.55f) t = Tile.Forest;
                     else t = Rng.Chance(4) ? Tile.Forest : Tile.Plains;
                     m.T[x, y] = t;
                 }
-            River(m);
-            var start = WorldDb.StartTown;
+            foreach (var p in water)
+                foreach (var q in m.Neighbors(p))
+                    if (m.T[q.X, q.Y] is Tile.Plains or Tile.Forest && elev[q.X, q.Y] < 0.6f && Rng.Chance(lake[p.X, p.Y] ? 25 : 6)) m.T[q.X, q.Y] = Tile.Marsh;
             var taken = new List<Point>();
+            var kinds = new Dictionary<Place, string>();
             int gap = loose ? 8 : 12;
-            Point Site()
+            var home = new Point(-1, -1);
+            var mid = new Point(W / 2, H / 2);
+            int Count(Point c, int r, Func<Tile, bool> f)
             {
-                for (int i = 0; i < 500; i++)
+                int n = 0;
+                for (int x = c.X - r; x <= c.X + r; x++)
+                    for (int y = c.Y - r; y <= c.Y + r; y++)
+                        if (Map.InB(x, y) && f(m.T[x, y])) n++;
+                return n;
+            }
+            bool Near(Point c, int r, bool[,] mask)
+            {
+                for (int x = c.X - r; x <= c.X + r; x++)
+                    for (int y = c.Y - r; y <= c.Y + r; y++)
+                        if (Map.InB(x, y) && mask[x, y] && m.T[x, y] == Tile.DeepWater) return true;
+                return false;
+            }
+            float Fit(Point c, string kind) => kind switch
+            {
+                "plains" => Count(c, 2, t => t == Tile.Plains) - Count(c, 1, t => t == Tile.DeepWater) * 3,
+                "lonehill" => Count(c, 3, t => t is Tile.Plains or Tile.Forest) - Count(c, 3, t => t is Tile.Hills or Tile.Mountain or Tile.DeepWater) * 2,
+                "lake" => (Near(c, 1, lake) ? 20 : Near(c, 2, lake) ? 10 : 0) + Count(c, 2, t => t == Tile.Marsh),
+                "forest" => (m.T[c.X, c.Y] is Tile.Forest or Tile.Wildwood ? 6 : 0) + Count(c, 3, t => t is Tile.Forest or Tile.Wildwood) * 0.6f,
+                "hills" => (m.T[c.X, c.Y] == Tile.Hills ? 6 : 0) + Count(c, 2, t => t == Tile.Hills) * 1.2f + Count(c, 3, t => t == Tile.Mountain) * 0.4f,
+                "river" => (Near(c, 1, river) ? 18 : Near(c, 2, river) ? 8 : 0) - Far(c, mid) / 6f,
+                "foothills" => Math.Min(Count(c, 3, t => t == Tile.Mountain), 12) * 1.5f - Count(c, 2, t => t == Tile.DeepWater) * 2,
+                _ => 0,
+            };
+            Point Site(string kind, int want)
+            {
+                var best = new Point(-1, -1);
+                float bs = float.MinValue;
+                for (int i = 0; i < 700; i++)
                 {
                     var c = new Point(Rng.Range(4, W - 5), Rng.Range(3, H - 4));
                     if (m.T[c.X, c.Y] is Tile.Mountain or Tile.DeepWater) continue;
                     if (taken.Any(o => Far(o, c) < gap)) continue;
-                    taken.Add(c);
-                    return c;
+                    float s = Fit(c, kind) + (float)Rng.Float() * 4;
+                    if (want > 0)
+                    {
+                        int f = Far(c, home);
+                        if (!loose && f < 16) continue;
+                        s -= Math.Abs(f - want) * 0.25f;
+                    }
+                    if (s > bs) { bs = s; best = c; }
                 }
-                return new Point(-1, -1);
+                if (best.X >= 0) taken.Add(best);
+                return best;
             }
-            foreach (var t in WorldDb.Towns.OrderByDescending(t => t.Start))
+            void Add(Point c, string name, string kind, int branch, string blurb, string site, Tile t)
             {
-                var c = Site();
-                if (c.X < 0) return Fail("town site");
-                m.T[c.X, c.Y] = Tile.TownSite;
-                m.Places.Add(new Place { Name = t.Name, Kind = "town", Branch = t.Branch, At = c, R = new Rectangle(c.X, c.Y, 1, 1), Blurb = t.Blurb });
+                Shape(m, c, site, lake);
+                m.T[c.X, c.Y] = t;
+                var pl = new Place { Name = name, Kind = kind, Branch = branch, At = c, R = new Rectangle(c.X, c.Y, 1, 1), Blurb = blurb };
+                m.Places.Add(pl);
+                kinds[pl] = site;
             }
-            var home = m.Places[0].At;
-            var spots = new List<Point>();
-            foreach (var _ in WorldDb.Dungeons)
+            var start = WorldDb.StartTown;
+            home = Site(start.Site, 0);
+            if (home.X < 0) return Fail("home site");
+            Add(home, start.Name, "town", start.Branch, start.Blurb, start.Site, Tile.TownSite);
+            foreach (var d in WorldDb.Dungeons.OrderBy(d => d.Branch == 0 ? -1 : d.Top))
             {
-                var c = Site();
-                if (c.X < 0) return Fail("dungeon site");
-                spots.Add(c);
+                var c = Site(d.Site, 12 + d.Top * 6);
+                if (c.X < 0) return Fail("dungeon site " + d.Short);
+                Add(c, d.Name, "dungeon", d.Branch, d.Blurb, d.Site, Tile.StairsDown);
             }
-            spots = spots.OrderBy(s => Far(s, home)).ToList();
-            if (!loose && Far(spots[0], home) < 16) return Fail("tomb too close");
-            var order = WorldDb.Dungeons.OrderBy(d => d.Branch == 0 ? -1 : d.Top).ToList();
-            for (int i = 0; i < order.Count; i++)
+            foreach (var t in WorldDb.Towns.Where(t => !t.Start))
             {
-                var c = spots[i];
-                m.T[c.X, c.Y] = Tile.StairsDown;
-                m.Places.Add(new Place { Name = order[i].Name, Kind = "dungeon", Branch = order[i].Branch, At = c, R = new Rectangle(c.X, c.Y, 1, 1), Blurb = order[i].Blurb });
+                var c = Site(t.Site, 0);
+                if (c.X < 0) return Fail("town site " + t.Name);
+                Add(c, t.Name, "town", t.Branch, t.Blurb, t.Site, Tile.TownSite);
             }
             foreach (var pl in m.Places)
+            {
+                bool wetSite = kinds[pl] is "lake" or "river";
                 foreach (var q in m.Neighbors(pl.At))
-                    if (m.T[q.X, q.Y] is Tile.Mountain or Tile.DeepWater) m.T[q.X, q.Y] = Tile.Plains;
+                {
+                    if (m.T[q.X, q.Y] == Tile.Mountain) m.T[q.X, q.Y] = Tile.Hills;
+                    else if (m.T[q.X, q.Y] == Tile.DeepWater && !wetSite) m.T[q.X, q.Y] = Tile.Marsh;
+                }
+                if (!Dirs4.Any(d => m.Walkable(pl.At.X + d.X, pl.At.Y + d.Y))) m.T[pl.At.X - 1, pl.At.Y] = Tile.Plains;
+            }
             var known = new List<Point>();
             if (!Roads(m, m.Places[0], known)) return Fail("roads");
             for (int x = 0; x < W; x++)
@@ -135,11 +210,14 @@ namespace Icosa
                     if (x == 0 || y == 0 || x == W - 1 || y == H - 1) m.T[x, y] = Tile.Mountain;
             Bells(m);
             Daylight(m);
+            Hollows(m);
+            Connect(m, home);
             var dist = Path.DistMap(m, new[] { home }, (x, y) => m.Walkable(x, y));
+            foreach (var pl in m.Places) if (dist[pl.At.X, pl.At.Y] == int.MaxValue) return Fail("unreachable " + pl.Name);
+            LakeCells = RiverCells = 0;
             for (int x = 0; x < W; x++)
                 for (int y = 0; y < H; y++)
-                    if (dist[x, y] == int.MaxValue && m.Walkable(x, y)) m.T[x, y] = Tile.Mountain;
-            foreach (var pl in m.Places) if (dist[pl.At.X, pl.At.Y] == int.MaxValue) return Fail("unreachable " + pl.Name);
+                    if (m.T[x, y] is Tile.DeepWater or Tile.Bridge or Tile.Shallow) { if (lake[x, y]) LakeCells++; else if (river[x, y]) RiverCells++; }
             m.Up = home;
             m.Down = m.Places.First(p => p.Dungeon && p.Branch == 0).At;
             Reveal(m, new Rectangle(home.X, home.Y, 1, 1), 3);
@@ -147,6 +225,183 @@ namespace Icosa
             foreach (var p in known) Reveal(m, new Rectangle(p.X, p.Y, 1, 1), 1);
             m.Feeling = "Somewhere in the Weald, a bell with no clapper rings once.";
             return m;
+        }
+
+        static float Sample(float[,] n, float x, float y)
+        {
+            x = Math.Clamp(x, 0, W - 1.001f);
+            y = Math.Clamp(y, 0, H - 1.001f);
+            int ix = (int)x, iy = (int)y;
+            float tx = x - ix, ty = y - iy;
+            float a = n[ix, iy] + (n[ix + 1, iy] - n[ix, iy]) * tx;
+            float b = n[ix, iy + 1] + (n[ix + 1, iy + 1] - n[ix, iy + 1]) * tx;
+            return a + (b - a) * ty;
+        }
+
+        static void Hydro(float[,] h, bool[,] lake, bool[,] river, bool[,] pool)
+        {
+            var fill = new float[W, H];
+            var done = new bool[W, H];
+            var to = new Point[W, H];
+            var order = new List<Point>(W * H);
+            var q = new PriorityQueue<Point, float>();
+            for (int x = 0; x < W; x++)
+                for (int y = 0; y < H; y++)
+                    if (x == 0 || y == 0 || x == W - 1 || y == H - 1)
+                    {
+                        fill[x, y] = h[x, y];
+                        done[x, y] = true;
+                        to[x, y] = new Point(x, y);
+                        q.Enqueue(new Point(x, y), h[x, y]);
+                    }
+            while (q.TryDequeue(out var c, out _))
+            {
+                order.Add(c);
+                foreach (var d in Dirs4)
+                {
+                    int nx = c.X + d.X, ny = c.Y + d.Y;
+                    if (!Map.InB(nx, ny) || done[nx, ny]) continue;
+                    done[nx, ny] = true;
+                    fill[nx, ny] = Math.Max(h[nx, ny], fill[c.X, c.Y] + 0.0004f);
+                    to[nx, ny] = c;
+                    q.Enqueue(new Point(nx, ny), fill[nx, ny]);
+                }
+            }
+            var acc = new float[W, H];
+            for (int i = order.Count - 1; i >= 0; i--)
+            {
+                var c = order[i];
+                acc[c.X, c.Y] += 0.5f + h[c.X, c.Y];
+                var t = to[c.X, c.Y];
+                if (t != c) acc[t.X, t.Y] += acc[c.X, c.Y];
+            }
+            var seen = new bool[W, H];
+            for (int x = 1; x < W - 1; x++)
+                for (int y = 1; y < H - 1; y++)
+                {
+                    if (seen[x, y] || fill[x, y] - h[x, y] < 0.07f) continue;
+                    var blob = new List<Point> { new Point(x, y) };
+                    seen[x, y] = true;
+                    for (int i = 0; i < blob.Count; i++)
+                        foreach (var d in Dirs4)
+                        {
+                            int nx = blob[i].X + d.X, ny = blob[i].Y + d.Y;
+                            if (nx <= 0 || ny <= 0 || nx >= W - 1 || ny >= H - 1 || seen[nx, ny] || fill[nx, ny] - h[nx, ny] < 0.07f) continue;
+                            seen[nx, ny] = true;
+                            blob.Add(new Point(nx, ny));
+                        }
+                    foreach (var p in blob)
+                        if (blob.Count >= 6) lake[p.X, p.Y] = true;
+                        else pool[p.X, p.Y] = true;
+                }
+            float flow = Rng.Range(90, 160);
+            for (int x = 0; x < W; x++)
+                for (int y = 0; y < H; y++)
+                    if (acc[x, y] >= flow && !lake[x, y]) river[x, y] = true;
+        }
+
+        static float[,] Shadow(float[,] h)
+        {
+            var r = new float[W, H];
+            bool east = Rng.Chance(50);
+            for (int y = 0; y < H; y++)
+            {
+                float rain = 1;
+                for (int i = 0; i < W; i++)
+                {
+                    int x = east ? i : W - 1 - i;
+                    rain = h[x, y] > 0.68f ? Math.Max(0.1f, rain - 0.1f) : Math.Min(1, rain + 0.012f);
+                    r[x, y] = rain;
+                }
+            }
+            return r;
+        }
+
+        static void Shape(Map m, Point c, string kind, bool[,] lake)
+        {
+            if (kind is "lonehill" or "forest")
+                foreach (var q in m.Neighbors(c))
+                    if (m.T[q.X, q.Y] != Tile.DeepWater) m.T[q.X, q.Y] = kind == "forest" ? Tile.Forest : Tile.Hills;
+            if (kind != "lake" || m.Neighbors(c).Any(q => lake[q.X, q.Y] && m.T[q.X, q.Y] == Tile.DeepWater)) return;
+            var d = Rng.Pick(Dirs4);
+            var o = new Point(c.X + d.X * 2, c.Y + d.Y * 2);
+            for (int x = o.X - 1; x <= o.X + 1; x++)
+                for (int y = o.Y - 1; y <= o.Y + 1; y++)
+                {
+                    if (x <= 1 || y <= 1 || x >= W - 2 || y >= H - 2) continue;
+                    if (x != o.X && y != o.Y && Rng.Chance(50)) continue;
+                    m.T[x, y] = Tile.DeepWater;
+                    lake[x, y] = true;
+                }
+        }
+
+        static void Hollows(Map m)
+        {
+            bool Rock(int x, int y)
+            {
+                for (int dx = -1; dx <= 1; dx++)
+                    for (int dy = -1; dy <= 1; dy++)
+                        if (!Map.InB(x + dx, y + dy) || m.T[x + dx, y + dy] != Tile.Mountain) return false;
+                return x > 1 && y > 1 && x < W - 2 && y < H - 2;
+            }
+            int made = 0;
+            for (int t = 0; t < 300 && made < 2; t++)
+            {
+                var c = new Point(Rng.Range(2, W - 3), Rng.Range(2, H - 3));
+                if (!Rock(c.X, c.Y)) continue;
+                var blob = new List<Point> { c };
+                int want = Rng.Range(6, 12);
+                for (int i = 0; i < 60 && blob.Count < want; i++)
+                {
+                    var b = Rng.Pick(blob);
+                    var d = Rng.Pick(Dirs4);
+                    var n = new Point(b.X + d.X, b.Y + d.Y);
+                    if (blob.Contains(n) || !Rock(n.X, n.Y)) continue;
+                    blob.Add(n);
+                }
+                if (blob.Count < 5) continue;
+                foreach (var b in blob) m.T[b.X, b.Y] = Rng.Chance(30) ? Tile.Forest : Tile.Plains;
+                made++;
+            }
+        }
+
+        static void Connect(Map m, Point home)
+        {
+            Fords = Filled = Valleys = 0;
+            Func<int, int, bool> walk = (x, y) => m.Walkable(x, y);
+            for (int it = 0; ; it++)
+            {
+                var dist = Path.DistMap(m, new[] { home }, walk);
+                var lost = new Point(-1, -1);
+                for (int x = 0; x < W && lost.X < 0; x++)
+                    for (int y = 0; y < H; y++)
+                        if (dist[x, y] == int.MaxValue && m.Walkable(x, y)) { lost = new Point(x, y); break; }
+                if (lost.X < 0) return;
+                var pocket = Path.DistMap(m, new[] { lost }, walk);
+                var cells = new List<Point>();
+                var from = new HashSet<Point>();
+                for (int x = 0; x < W; x++)
+                    for (int y = 0; y < H; y++)
+                    {
+                        if (pocket[x, y] != int.MaxValue) cells.Add(new Point(x, y));
+                        if (dist[x, y] != int.MaxValue) from.Add(new Point(x, y));
+                    }
+                var path = cells.Count < 3 || it > 60 ? null : Route(m, from, lost, (x, y) => x <= 0 || y <= 0 || x >= W - 1 || y >= H - 1 ? -1 : m.Walkable(x, y) ? 1 : m.T[x, y] == Tile.DeepWater ? 6 : m.T[x, y] == Tile.Mountain ? 40 : -1);
+                if (path == null)
+                {
+                    foreach (var p in cells) m.T[p.X, p.Y] = Tile.Mountain;
+                    Filled += cells.Count;
+                    continue;
+                }
+                var pass = new Point(-1, -1);
+                foreach (var p in path)
+                    if (m.T[p.X, p.Y] == Tile.DeepWater) { m.T[p.X, p.Y] = Tile.Shallow; Fords++; }
+                    else if (m.T[p.X, p.Y] == Tile.Mountain) { m.T[p.X, p.Y] = Tile.Hills; if (pass.X < 0) pass = p; }
+                if (pass.X < 0 || cells.Count < 6) continue;
+                Valleys++;
+                m.Engravings[pass] = Rng.Pick(new[] { "A cairn of flat stones marks a goat-path over the crags. Someone has scratched a lantern on the top stone.", "Rungs of old iron are hammered into the rock here, leading up and over. They are warm.", "A notch in the mountains, worn by feet. A dead bell hangs from a spike in the stone, clapperless, cracked." });
+                Spawn.DropAt(m, Rng.Chance(30) ? Spawn.Gold(4) : Spawn.RandomItem(3), Rng.Pick(cells));
+            }
         }
 
         static float[,] Noise(int cell)
@@ -172,20 +427,6 @@ namespace Icosa
             return n;
         }
 
-        static void River(Map m)
-        {
-            if (!Rng.Chance(70)) return;
-            float x = Rng.Range(25, 75);
-            float drift = 0;
-            for (int y = 0; y < H; y++)
-            {
-                drift = Math.Clamp(drift + (float)(Rng.Float() - 0.5) * 0.5f, -0.9f, 0.9f);
-                x = Math.Clamp(x + drift, 8, W - 9);
-                if (m.T[(int)x, y] != Tile.Mountain) m.T[(int)x, y] = Tile.DeepWater;
-                if (Rng.Chance(25) && m.T[(int)x + 1, y] != Tile.Mountain) m.T[(int)x + 1, y] = Tile.Marsh;
-            }
-        }
-
         static int OverCost(Map m, int x, int y)
         {
             if (x <= 0 || y <= 0 || x >= W - 1 || y >= H - 1) return -1;
@@ -193,6 +434,7 @@ namespace Icosa
             {
                 Tile.Road or Tile.Bridge => 1,
                 Tile.Plains => 2,
+                Tile.Shallow => 4,
                 Tile.Forest => 4,
                 Tile.Hills => 5,
                 Tile.Marsh => 6,
@@ -501,11 +743,33 @@ namespace Icosa
             if (m.Places.Any(pl => !pl.Dungeon && Far(pl.At, p.Pos) <= 3)) return;
             var t = m.T[p.Pos.X, p.Pos.Y];
             int odds = t switch { Tile.Road or Tile.Bridge => 20, Tile.Forest => 9, Tile.Hills => 10, Tile.Marsh => 8, Tile.Wildwood => 7, _ => 13 };
+            odds = Math.Max(5, (int)Math.Round(odds * 1.5f / (0.75f + Wildness(m, p.Pos) * 0.375f)));
             if (resting) odds *= 2;
             if (Rng.D(odds) != 1) return;
             Dm.AddDie(odds, 1, 0, 1, "encounter check", false);
             Begin(t);
         }
+
+        public static float Wildness(Map m, Point p)
+        {
+            var home = m.Places.FirstOrDefault(pl => pl.Branch == WorldDb.StartTown.Branch);
+            float w = Far(p, home?.At ?? m.Up) / 18f;
+            int road = 4;
+            for (int x = p.X - 3; x <= p.X + 3; x++)
+                for (int y = p.Y - 3; y <= p.Y + 3; y++)
+                    if (Map.InB(x, y) && m.T[x, y] is Tile.Road or Tile.Bridge) road = Math.Min(road, Path.Cheb(p, new Point(x, y)));
+            w -= (4 - road) * 0.35f;
+            foreach (var pl in m.Places)
+            {
+                int f = Far(pl.At, p);
+                if (pl.Dungeon) w += Math.Max(0, 6 - f) * 0.08f * WorldDb.Get(pl.Branch).Top;
+                else w -= Math.Max(0, 10 - f) * (pl == home ? 0.2f : 0.12f);
+            }
+            w += m.T[p.X, p.Y] switch { Tile.Wildwood => 1f, Tile.Marsh or Tile.Shallow => 0.6f, Tile.Hills => 0.4f, Tile.Forest => 0.3f, _ => 0f };
+            return Math.Max(0, w);
+        }
+
+        public static string WildWord(float w) => w < 1 ? "{good}tame{/}" : w < 2 ? "wild" : w < 3.5f ? "{warn}dangerous{/}" : "{bad}haunted{/}";
 
         static readonly Dictionary<string, string[]> Pools = new Dictionary<string, string[]>
         {
@@ -521,8 +785,8 @@ namespace Icosa
             var m = Dm.Map;
             var p = Dm.Player;
             var home = m.Places.FirstOrDefault(pl => pl.Branch == WorldDb.StartTown.Branch)?.At ?? m.Up;
-            int danger = Math.Clamp(1 + Far(p.Pos, home) / 18, 1, 6);
-            string terrain = t switch { Tile.Forest => "forest", Tile.Wildwood => "wildwood", Tile.Hills => "hills", Tile.Marsh => "marsh", _ => "plains" };
+            int danger = Math.Clamp(1 + (int)Wildness(m, p.Pos), 1, 6);
+            string terrain = t switch { Tile.Forest => "forest", Tile.Wildwood => "wildwood", Tile.Hills => "hills", Tile.Marsh or Tile.Shallow => "marsh", _ => "plains" };
             var cands = Pools[terrain].Select(MonsterDb.Get).Where(d => d != null && d.Depth <= danger + 1).ToList();
             var def = cands.Count == 0 ? MonsterDb.Get("jackal") : Rng.Weighted(cands, d => d.Freq * (d.Depth >= danger - 1 ? 3 : 1));
             int n = Math.Clamp(Rng.Range(def.GroupMin, def.GroupMax), 1, 2 + danger / 2);
@@ -530,7 +794,7 @@ namespace Icosa
             var spec = new EncounterSpec { Terrain = t, Def = def, Count = n, PlayerSurprised = ps <= 2 && ms > 2, MonstersSurprised = ms <= 2 && ps > 2 };
             Dm.AddDie(6, ps, 0, 3, "your surprise", ps > 2);
             Dm.AddDie(6, ms, 0, 3, "their surprise", ms <= 2);
-            string where = t switch { Tile.Road or Tile.Bridge => "on the road", Tile.Forest => "in the forest", Tile.Wildwood => "in the wildwood", Tile.Hills => "in the hills", Tile.Marsh => "in the marsh", _ => "on the plains" };
+            string where = t switch { Tile.Road or Tile.Bridge => "on the road", Tile.Forest => "in the forest", Tile.Wildwood => "in the wildwood", Tile.Hills => "in the hills", Tile.Marsh => "in the marsh", Tile.Shallow => "at the ford", _ => "on the plains" };
             string what = n == 1 ? Item.Article(def.Name) : n + " " + MonsterDb.PluralName(def);
             Synth.Play(Sfx.Shriek, 0.4f);
             Dm.Msg("{bad}Encounter " + where + "! You come upon " + what + "." + (spec.PlayerSurprised ? " They have the drop on you!" : spec.MonstersSurprised ? " They haven't noticed you yet." : "") + "{/}", true);
@@ -556,7 +820,7 @@ namespace Icosa
                         Tile.Forest => a > 0.74f ? Tile.Pine : a > 0.45f ? Tile.Tree : Rng.Chance(20) ? Tile.TallGrass : Tile.Meadow,
                         Tile.Wildwood => a > 0.62f ? Tile.Pine : a > 0.3f ? Tile.Tree : Tile.TallGrass,
                         Tile.Hills => a > 0.78f ? Tile.Mountain : a > 0.64f ? Tile.Rubble : Rng.Chance(15) ? Tile.TallGrass : Tile.Meadow,
-                        Tile.Marsh => b > 0.74f ? Tile.DeepWater : b > 0.5f ? Tile.Shallow : a > 0.7f ? Tile.Tree : Tile.TallGrass,
+                        Tile.Marsh or Tile.Shallow => b > 0.74f ? Tile.DeepWater : b > 0.5f ? Tile.Shallow : a > 0.7f ? Tile.Tree : Tile.TallGrass,
                         _ => a > 0.76f ? Tile.Tree : Rng.Chance(18) ? Tile.TallGrass : Rng.Chance(3) ? Tile.Flowers : Tile.Meadow,
                     };
                 }
