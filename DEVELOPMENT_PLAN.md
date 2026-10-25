@@ -36,11 +36,6 @@ Roadmap for expanding the game. Phases are ordered by priority; items within a p
 - **Low (1–4):** giant frog, troglodyte (stench), xvart, giant weasel, kobold shaman, goblin wolf-rider.
 - **Mid (5–9):** gargoyle (statue disguise), ogre mage (invisibility, cold cone), lamia (Wisdom drain), will-o'-wisp swarm, gnoll pack leader, earth elemental, ghast (stench + paralysis).
 - **Deep (10–15):** iron golem (fire heals it), mind flayer elder brain encounter, death knight, nalfeshnee, drider, ancient dragons, demilich (soul-trapping gems).
-- **Original "meta" creatures (fit the theme):**
-  - Rules Lawyer: dispels buffs, shouts "Objection!".
-  - Erased Sketch: invisible until map ink touches it.
-  - Critical Fumble: a gremlin that forces natural 1s nearby.
-  - Retconned Hero: a ghost of a previous character from the Hall of Fame, carrying that character's gear.
 
 ### Items
 - More artifacts (Luck Blade, Staff of the Magi, Robe of Eyes, Cubic Gate).

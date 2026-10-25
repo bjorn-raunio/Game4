@@ -124,8 +124,11 @@ namespace Icosa
             Player.Remove(Status.Engulfed);
             Player.Remove(Status.Swallowed);
             Player.Remove(Status.Held);
+            Point? under = how == Arrival.Fall && old != null && !old.Outdoors && old.Branch == m.Branch && old.Depth == depth - 1 ? m.NearestFree(Player.Pos, 6) : null;
+            if (under.HasValue && m.T[under.Value.X, under.Value.Y] == Tile.Chasm) under = null;
             Point pos = how switch
             {
+                Arrival.Fall when under.HasValue => under.Value,
                 _ when m.Wild => m.Up,
                 Arrival.Down when m.Town => new Point(m.Down.X, m.Down.Y - 1),
                 Arrival.Down => m.Up,
@@ -675,13 +678,23 @@ namespace Icosa
             int d = Depth;
             var def = Spawn.PickMonster(d, x => x.Freq > 0 && !x.Has(MF.Immobile) && !x.Has(MF.Mimic) && !x.Has(MF.Ambush));
             if (def == null) return;
+            var walk = Path.DistMap(Map, new[] { Player.Pos }, (x, y) => Map.Walkable(x, y) && Map.T[x, y] != Tile.Chasm || Map.T[x, y] is Tile.DoorClosed or Tile.DoorLocked);
+            int lo = aware ? 12 : 20, hi = aware ? 30 : int.MaxValue - 1;
             Point spot = Point.Zero;
-            for (int t = 0; t < 200; t++)
+            int best = int.MinValue, found = 0;
+            for (int t = 0; t < 300 && found < 8; t++)
             {
                 var q = Map.RandomFloor();
-                if (Map.Vis[q.X, q.Y] || Path.Cheb(q, Player.Pos) < 10) continue;
-                spot = q;
-                break;
+                int w = walk[q.X, q.Y];
+                if (Map.Vis[q.X, q.Y] || w < lo || w > hi || Map.ShopAt(q) != null || Map.MonsterAt(q) != null) continue;
+                found++;
+                int score = (aware ? -Math.Abs(w - 18) : Math.Min(w, 60)) + (Map.Seen[q.X, q.Y] ? 0 : 15) + Rng.Int(10);
+                if (score > best) { best = score; spot = q; }
+            }
+            for (int t = 0; t < 200 && spot == Point.Zero; t++)
+            {
+                var q = Map.RandomFloor();
+                if (!Map.Vis[q.X, q.Y] && Path.Cheb(q, Player.Pos) >= 10) spot = q;
             }
             if (spot == Point.Zero) return;
             int n = Math.Max(1, Rng.Range(def.GroupMin, Math.Min(def.GroupMax, 3)));

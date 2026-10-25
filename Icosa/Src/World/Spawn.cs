@@ -9,12 +9,97 @@ namespace Icosa
     {
         public static readonly HashSet<string> ArtifactsMade = new HashSet<string>();
 
+        public static int[,] Reach, Detour;
+        public static int ReachMax;
+
+        public static bool Pass(Map m, int x, int y) => m.Walkable(x, y) && m.T[x, y] is not Tile.Chasm || m.T[x, y] is Tile.DoorClosed or Tile.DoorLocked or Tile.DoorSecret or Tile.Gate;
+
+        public static void Chart(Map m)
+        {
+            Reach = Path.DistMap(m, new[] { m.Up }, (x, y) => Pass(m, x, y));
+            ReachMax = 1;
+            foreach (var v in Reach) if (v != int.MaxValue) ReachMax = Math.Max(ReachMax, v);
+            var goal = m.Down;
+            if (m.IsBottom || goal == Point.Zero)
+            {
+                var r = m.Rooms.FirstOrDefault(x => x.Theme is "sanctum" or "final");
+                goal = r != null ? r.Cells.Where(c => Reach[c.X, c.Y] != int.MaxValue).DefaultIfEmpty(m.Up).First() : m.Up;
+            }
+            var spine = new List<Point> { goal };
+            var p = goal;
+            while (Reach[p.X, p.Y] > 0 && Reach[p.X, p.Y] != int.MaxValue)
+            {
+                var next = p;
+                foreach (var q in m.Neighbors(p)) if (Reach[q.X, q.Y] == Reach[p.X, p.Y] - 1) { next = q; break; }
+                if (next == p) break;
+                spine.Add(p = next);
+            }
+            Detour = Path.DistMap(m, spine, (x, y) => Pass(m, x, y));
+        }
+
+        static int R(Point p) => Reach[p.X, p.Y] == int.MaxValue ? 0 : Reach[p.X, p.Y];
+        static int Off(Point p) => Detour[p.X, p.Y] == int.MaxValue ? 0 : Detour[p.X, p.Y];
+
+        static Point Best(Map m, Func<Point, int> score, Func<Point, bool> ok, int draws)
+        {
+            var best = m.RandomFloor(ok);
+            for (int i = 1; i < draws; i++)
+            {
+                var q = m.RandomFloor(ok);
+                if (score(q) > score(best)) best = q;
+            }
+            return best;
+        }
+
+        public static List<Point> DeadEnds(Map m)
+        {
+            var ends = new List<Point>();
+            for (int x = 1; x < Map.W - 1; x++)
+                for (int y = 1; y < Map.H - 1; y++)
+                {
+                    if (m.T[x, y] is not (Tile.Floor or Tile.Corridor)) continue;
+                    int n = 0;
+                    foreach (var q in m.Neighbors(new Point(x, y))) if (Pass(m, q.X, q.Y)) n++;
+                    if (n == 1) ends.Add(new Point(x, y));
+                }
+            return ends;
+        }
+
+        static void PlaceMarks(Map m, Room r)
+        {
+            int d = m.Depth;
+            MonsterDef band = null;
+            foreach (var (p, ch) in r.Marks)
+                switch (ch)
+                {
+                    case 'm': if (PickMonster(d, x => x.Freq > 0 && !x.Has(MF.Immobile)) is MonsterDef a) PlaceMonster(m, a, p, true); break;
+                    case 'M': if (PickMonster(d + 2, x => x.Freq > 0 && !x.Has(MF.Immobile)) is MonsterDef b) PlaceMonster(m, b, p, true); break;
+                    case 'u': if (PickMonster(d, x => x.Has(MF.Undead) && x.Freq > 0) is MonsterDef u) PlaceMonster(m, u, p, true); break;
+                    case 'g':
+                        band ??= PickMonster(d, x => x.Has(MF.Hands) && x.Freq > 0 && !x.Has(MF.Undead));
+                        if (band != null) PlaceMonster(m, band, p, true);
+                        break;
+                    case '$': DropAt(m, Gold(d * 2), p); break;
+                    case '*': DropAt(m, RandomItem(d + 1), p); break;
+                    case '!': DropAt(m, RandomItem(d + 3), p); break;
+                    case 'c': DropAt(m, MakeChest(d + 2), p); break;
+                    case '^':
+                        var tt = RandomTrap(d);
+                        if (tt == TrapT.Trapdoor && m.NoFall) tt = TrapT.Pit;
+                        m.Traps[p] = new Trap { Pos = p, T = tt };
+                        break;
+                }
+            r.Marks = null;
+        }
+
         public static void Populate(Map m)
         {
             int d = m.Depth;
+            Chart(m);
             foreach (var shop in m.Shops) StockShop(m, shop);
             foreach (var r in m.Rooms)
             {
+                if (r.Marks != null) PlaceMarks(m, r);
                 switch (r.Theme)
                 {
                     case "crypt":
@@ -64,14 +149,18 @@ namespace Icosa
             }
 
             int encounters = 4 + d / 2 + Rng.Range(0, 3);
+            if (Gen.LeverGuard != Point.Zero && PickMonster(d + 1, x => x.Freq > 0 && !x.Has(MF.Immobile)) is MonsterDef warden) PlaceMonster(m, warden, Gen.LeverGuard, true);
+            int safe = Math.Min(12, ReachMax / 4);
             for (int i = 0; i < encounters; i++)
             {
-                var def = PickMonster(d, x => x.Freq > 0);
+                var p = Best(m, R, q => R(q) > safe && Path.Cheb(q, m.Up) > 9 && m.ShopAt(q) == null && m.MonsterAt(q) == null, 2);
+                int md = d + (R(p) * 4 > ReachMax * 3 ? 1 : 0);
+                var kin = Gen.Owner?.Kin ?? MF.None;
+                var def = (kin != MF.None && Rng.Chance(Gen.Owner.KinPct) ? PickMonster(md, x => x.Freq > 0 && x.Has(kin)) : null) ?? PickMonster(md, x => x.Freq > 0);
                 if (def == null) continue;
-                var p = m.RandomFloor(q => Path.Cheb(q, m.Up) > 9 && m.ShopAt(q) == null && m.MonsterAt(q) == null);
                 if (def.Has(MF.Ambush) && def.Id != "green_slime")
                 {
-                    p = m.RandomFloor(q => !m.Lit[q.X, q.Y] && Path.Cheb(q, m.Up) > 9 && m.ShopAt(q) == null);
+                    p = m.RandomFloor(q => !m.Lit[q.X, q.Y] && R(q) > safe && Path.Cheb(q, m.Up) > 9 && m.ShopAt(q) == null);
                 }
                 PlaceGroup(m, def, p, Rng.Chance(65));
             }
@@ -84,8 +173,23 @@ namespace Icosa
             int items = 8 + Rng.Range(0, 5);
             for (int i = 0; i < items; i++)
             {
-                var p = m.RandomFloor(q => m.ShopAt(q) == null);
-                DropAt(m, RandomItem(d), p);
+                var p = Best(m, Off, q => m.ShopAt(q) == null, i % 2 == 0 ? 3 : 1);
+                DropAt(m, RandomItem(d + (Off(p) >= 12 ? 1 : 0)), p);
+            }
+            var ends = DeadEnds(m).Where(q => Off(q) >= 6 && m.ShopAt(q) == null && q != m.Up && q != m.Down).OrderByDescending(Off).Take(4).ToList();
+            Rng.Shuffle(ends);
+            foreach (var q in ends.Take(Rng.Range(1, 3)))
+            {
+                int roll = Rng.Int(100);
+                if (roll < 40) DropAt(m, RandomItem(d + 1), q);
+                else if (roll < 65) DropAt(m, Gold(d * 3), q);
+                else if (roll < 80) DropAt(m, MakeChest(d), q);
+                else
+                {
+                    DropAt(m, RandomItem(d + 2), q);
+                    var tt = RandomTrap(d);
+                    if (!m.Traps.ContainsKey(q)) m.Traps[q] = new Trap { Pos = q, T = tt == TrapT.Trapdoor && m.NoFall ? TrapT.Pit : tt };
+                }
             }
             int golds = Rng.Range(3, 7);
             for (int i = 0; i < golds; i++) DropAt(m, Gold(d), m.RandomFloor(q => m.ShopAt(q) == null));
@@ -100,7 +204,7 @@ namespace Icosa
             int traps = 2 + d / 2 + Rng.Range(0, 2);
             for (int i = 0; i < traps; i++)
             {
-                var p = m.RandomFloor(q => (m.T[q.X, q.Y] == Tile.Floor || m.T[q.X, q.Y] == Tile.Corridor) && Path.Cheb(q, m.Up) > 4 && m.ShopAt(q) == null && !m.Traps.ContainsKey(q));
+                var p = m.RandomFloor(q => (m.T[q.X, q.Y] == Tile.Floor || m.T[q.X, q.Y] == Tile.Corridor) && Path.Cheb(q, m.Up) > 4 && R(q) > 5 && m.ShopAt(q) == null && !m.Traps.ContainsKey(q));
                 var tt = RandomTrap(d);
                 if (tt == TrapT.Trapdoor && m.NoFall) tt = TrapT.Pit;
                 m.Traps[p] = new Trap { Pos = p, T = tt };

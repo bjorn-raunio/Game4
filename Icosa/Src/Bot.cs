@@ -178,6 +178,12 @@ namespace Icosa
             if (dist != null && Actions.NextStep(dist) != null && Rng.Chance(97)) { stuckExplore = 0; Key(g, 'X'); return; }
             if (!m.IsBottom && m.Seen[m.Down.X, m.Down.Y] && StepToward(g, m.Down)) return;
             if (m.IsBottom && m.Branch != 0 && !climbing) { climbing = true; Log("LEAVING " + WorldDb.Get(m.Branch).Name + " at L" + p.Level + " turn " + Dm.Turn + (Dm.Achievements.Any(a => a.Contains(WorldDb.Get(m.Branch).Name)) ? " [boss slain]" : " [boss alive]")); return; }
+            var lever = Enumerable.Range(0, Map.W * Map.H).Select(i => new Point(i / Map.H, i % Map.H)).FirstOrDefault(q => m.T[q.X, q.Y] == Tile.Lever && m.Seen[q.X, q.Y]);
+            if (lever != Point.Zero)
+            {
+                if (Path.Cheb(p.Pos, lever) <= 1) { Log("LEVER depth " + m.Depth + " turn " + Dm.Turn); Key(g, 'E'); return; }
+                if (StepToward(g, lever)) return;
+            }
             stuckExplore++;
             if (stuckExplore > 25)
             {

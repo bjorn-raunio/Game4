@@ -823,7 +823,49 @@ namespace Icosa
             if (t == Tile.Throne) { Throne(); return; }
             if (t == Tile.OracleDie || M.Neighbors(pos).Any(q => M.T[q.X, q.Y] == Tile.OracleDie)) { Oracle(); return; }
             if (M.Neighbors(pos).Any(q => M.T[q.X, q.Y] == Tile.Bell)) { RingBell(); return; }
+            var racks = M.Neighbors(pos).Where(q => M.T[q.X, q.Y] == Tile.Rack).ToList();
+            if (racks.Count > 0) { Rack(racks); return; }
+            var lever = M.Neighbors(pos).FirstOrDefault(q => M.T[q.X, q.Y] is Tile.Lever or Tile.LeverDown);
+            if (lever != Point.Zero) { PullLever(lever); return; }
             Dm.Msg(t == Tile.Altar ? "You sit on the altar. That seems disrespectful." : "Having fun sitting on the floor?");
+        }
+
+        static void PullLever(Point lever)
+        {
+            if (M.T[lever.X, lever.Y] == Tile.LeverDown) { Dm.Msg("{dim}The lever is already down. It will not go any further.{/}"); return; }
+            M.T[lever.X, lever.Y] = Tile.LeverDown;
+            M.Remember(lever.X, lever.Y);
+            Synth.Play(Sfx.Door, 0.8f, -0.5f);
+            Dm.Msg("You haul the lever down. Chains rattle away through the stone.");
+            Dm.Noise(P.Pos, 15);
+            foreach (var g in RaiseGates()) Dm.Msg("{gold}Far to the " + Dm.Compass(P.Pos, g) + ", iron grinds against iron as a portcullis rises.{/}");
+            Dm.PlayerActed();
+        }
+
+        public static List<Point> RaiseGates()
+        {
+            var raised = new List<Point>();
+            for (int x = 0; x < Map.W; x++)
+                for (int y = 0; y < Map.H; y++)
+                    if (M.T[x, y] == Tile.Gate)
+                    {
+                        M.T[x, y] = Tile.GateOpen;
+                        if (M.Seen[x, y]) M.Remember(x, y);
+                        raised.Add(new Point(x, y));
+                    }
+            return raised;
+        }
+
+        static void Rack(List<Point> racks)
+        {
+            var q = racks.FirstOrDefault(r => M.FeatureUses.TryGetValue(r, out var n) && n > 0);
+            if (q == Point.Zero) { Dm.Msg("{dim}You run your hand along the rack. Empty pegs, old rust, a spider.{/}"); return; }
+            M.FeatureUses[q] = 0;
+            var it = Spawn.RandomItem(M.Depth, IK.Weapon);
+            M.Drop(it, P.Pos);
+            Synth.Play(Sfx.Hit, 0.4f, 0.3f);
+            Dm.Msg("You lift " + it.Name() + " down from the rack and set it at your feet.");
+            Dm.PlayerActed();
         }
 
         static void RingBell()

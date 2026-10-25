@@ -10,7 +10,7 @@ namespace Icosa
         Wall, Floor, Corridor, DoorClosed, DoorOpen, DoorLocked, DoorSecret, DoorBroken, StairsUp, StairsDown,
         Shallow, DeepWater, Lava, Chasm, Rubble, Grass, Moss, Fountain, DryFountain, Altar, Throne, Statue, Pillar,
         Bookshelf, Sarcophagus, Brazier, Web, Bridge, Rug, OracleDie, Dais, Crystal, Mushroom, Bones, PermWall, BoneVeil, Glyph, Ash,
-        Tree, Pine, Mountain, Road, Meadow, TallGrass, Flowers, Field, Bell, Plains, Forest, Wildwood, Hills, Marsh, TownSite, Grave
+        Tree, Pine, Mountain, Road, Meadow, TallGrass, Flowers, Field, Bell, Plains, Forest, Wildwood, Hills, Marsh, TownSite, Grave, Rack, Gate, GateOpen, Lever, LeverDown
     }
 
     public class TileDef
@@ -74,6 +74,7 @@ namespace Icosa
         public string Theme;
         public bool Lit;
         public int ShopId = -1;
+        public List<(Point P, char C)> Marks;
         public Point Center => new Point(R.X + R.Width / 2, R.Y + R.Height / 2);
     }
 
@@ -205,7 +206,12 @@ namespace Icosa
             D(Tile.Hills, '∩', C(185, 150, 95), C(46, 36, 20), true, true, "hills", "Rolling hills. You can see a long way from the tops of them.");
             D(Tile.Marsh, '"', C(130, 150, 90), C(22, 32, 26), true, true, "marsh", "Reeds, black water and sucking mud.");
             D(Tile.TownSite, 'Π', C(245, 215, 130), C(70, 46, 22), true, true, "settlement", null, true);
-            D(Tile.Grave, '∩', C(175, 175, 165), C(24, 30, 20), false, true, "gravestone", "A lamplighter's headstone. A little lantern burns on top of it, as it has every night since the burial.");
+            D(Tile.Rack, '¦', C(190, 190, 200), C(45, 35, 25), false, true, "weapon rack", "A rack of pegs and notches for spears and swords, most of them long since borrowed by the dead. (E to take from it)", true);
+            D(Tile.Gate, 'Ξ', C(170, 175, 190), C(30, 30, 38), false, true, "portcullis", "An iron portcullis, its teeth sunk into holes in the floor. There is no lock and no keyhole. It must be raised from somewhere else.");
+            D(Tile.GateOpen, '·', C(150, 150, 165), C(26, 26, 32), true, true, "raised portcullis", "The portcullis hangs overhead, its teeth dripping rust.");
+            D(Tile.Lever, '¬', C(230, 160, 70), C(60, 54, 46), false, false, "iron lever", "A heavy iron lever set into the wall, chains running up from it into the stone. (E to pull it)", true);
+            D(Tile.LeverDown, '¬', C(120, 110, 100), C(60, 54, 46), false, false, "pulled lever", "The lever has been hauled all the way down.");
+            D(Tile.Grave,'∩', C(175, 175, 165), C(24, 30, 20), false, true, "gravestone", "A lamplighter's headstone. A little lantern burns on top of it, as it has every night since the burial.");
         }
 
         public Map(int depth, int branch = 0)

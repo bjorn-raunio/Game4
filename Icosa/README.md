@@ -28,3 +28,4 @@ Press `?` in game for the full key list. Mouse: hover to inspect, left-click to 
 - `--wizard` debug keys (Ctrl+D descend, Ctrl+M map, Ctrl+H heal, Ctrl+L level, Ctrl+I item)
 - `--auto script.txt` scripted input with `shot:file.png` screenshots
 - `--bot N log.txt` an automated player that plays N games and logs results and exceptions
+- `--genstats N out.txt [--seed S]` generates N levels of every dungeon depth headlessly and writes a table of layout metrics (route length, dead ends, loop %, unreachable cells, monsters near the stairs, item detour), set-piece counts and ASCII dumps of any disconnected level

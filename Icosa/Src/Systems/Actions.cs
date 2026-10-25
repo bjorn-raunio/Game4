@@ -245,6 +245,9 @@ namespace Icosa
                     }
                     Dm.Msg("This door is locked. {dim}(Kick it with D, or use Knock.){/}");
                     return false;
+                case Tile.Gate:
+                    Dm.Msg("A portcullis bars the way. {dim}It has no lock; something somewhere must raise it. (Knock will also do.){/}");
+                    return false;
                 case Tile.DeepWater:
                     if (p.Has(Status.Levitate) || p.Wearing("levitate")) break;
                     Dm.Msg("The water is too deep to wade.");

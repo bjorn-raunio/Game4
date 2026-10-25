@@ -373,6 +373,13 @@ namespace Icosa
                             Dm.Msg("{magic}With a loud knock, the door swings open.{/}");
                             return true;
                         }
+                        if (t == Tile.Gate)
+                        {
+                            Use.RaiseGates();
+                            Synth.Play(Sfx.Door, 0.8f, -0.5f);
+                            Dm.Msg("{magic}At a single loud knock, the portcullis shudders and hauls itself up into the ceiling.{/}");
+                            return true;
+                        }
                         var chest = M.ItemsAt(target).Concat(M.ItemsAt(caster.Pos)).FirstOrDefault(i => i.Def.Kind == IK.Chest && i.Locked);
                         if (chest != null) { chest.Locked = false; Dm.Msg("{magic}The chest's lock clicks open.{/}"); return true; }
                         Dm.Msg("Nothing there to open.");
@@ -972,7 +979,7 @@ namespace Icosa
                 case SpellId.FindPath:
                     {
                         if (M.IsBottom) { Dm.Msg("The path ends here. It always did."); return true; }
-                        var dist = Path.DistMap(M, new[] { M.Down }, (x, y) => M.Walkable(x, y) || M.T[x, y] is Tile.DoorClosed or Tile.DoorLocked or Tile.DoorSecret);
+                        var dist = Path.DistMap(M, new[] { M.Down }, (x, y) => M.Walkable(x, y) || M.T[x, y] is Tile.DoorClosed or Tile.DoorLocked or Tile.DoorSecret or Tile.Gate);
                         var cur = caster.Pos;
                         int guard = 0;
                         while (cur != M.Down && guard++ < 400)
