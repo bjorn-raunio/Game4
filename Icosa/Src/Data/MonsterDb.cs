@@ -56,7 +56,7 @@ namespace Icosa
             M("bandit", "bandit", '@', C(170, 130, 90), "1", 7, 12, 1, 6, "1d6 hit steal@20", Humanoid | MF.Evil,
                 "An unemployed adventurer who has found a more direct way to acquire treasure: yours.").Group(2, 4).Mor(7).Al(Align.CE).Drops("random", 35);
             M("paper_golem", "paper golem", '\'', C(240, 235, 215), "2", 9, 12, 1, 4, "1d3 slash bleed@30", MF.Mindless | MF.VulnFire | MF.NoCorpse | MF.Hands,
-                "A golem folded from discarded character sheets. Faint pencil names drift across its body: Gorbash, Elira, Tim the Fourth.").Mor(12).Drops("scroll", 50);
+                "A golem folded from the pages of dead wizards' spellbooks. Faded names drift across its body in old ink: Gorbash, Elira, Tim the Fourth.").Mor(12).Drops("scroll", 50);
 
             M("orc", "orc", 'o', C(120, 160, 70), "1", 6, 9, 2, 10, "1d8 hit", Humanoid | MF.Giant | MF.Orc | MF.Evil | MF.Infra,
                 "Pig-snouted raiders who hold that the only bad fight is the one they lost. Their banners are mostly teeth.").Group(3, 8).Mor(8).Al(Align.LE).Drops("random", 15);
@@ -101,8 +101,8 @@ namespace Icosa
                 "Grey dwarves of the deep mines. Grim, greedy, and unpleasantly good at war.").Group(2, 4).Mor(9).Al(Align.LE).Drops("random", 25);
             M("mimic", "mimic", 'm', C(170, 120, 60), "7", 7, 3, 4, 4, "3d4 hit sticky", MF.Mimic | MF.Warm,
                 "It was a chest. Then it had teeth. The lesson is that chests should not have teeth, and this one did.").Mor(10).Drops("gold", 100);
-            M("wandering", "Wandering Monster", '?', C(220, 220, 220), "4", 5, 12, 4, 3, "1d10 hit", MF.Morph | MF.Hands,
-                "Literally the Wandering Monster: a table entry that escaped the table. It is never the same thing twice.").Mor(9);
+            M("wanderer", "Wanderer", '?', C(220, 220, 220), "4", 5, 12, 4, 3, "1d10 hit", MF.Morph | MF.Hands,
+                "A thing that walks the deep roads between the levels, wearing whatever shape it last killed. It is never the same thing twice.").Mor(9);
             M("lizardman", "lizard man", 'l', C(80, 160, 90), "2+1", 5, 9, 5, 6, "1d3 claw;1d3 claw;1d8 bite", MF.Hands | MF.Swim,
                 "Cold-blooded swamp warriors who view mammals as poorly organized meat.").Group(2, 5).Mor(9);
             M("carrion", "carrion crawler", 'C', C(150, 190, 110), "3+1", 3, 12, 5, 5, "1d2 tentacle paralyze;1d2 tentacle paralyze;1d2 bite", MF.Animal,
@@ -132,8 +132,8 @@ namespace Icosa
                 "Rubbery green and relentlessly alive. Cut it to pieces and the pieces get up. Only fire or acid finishes the argument.", Size.Large).Mor(10).Al(Align.CE);
             M("wight", "wight", 'W', C(200, 200, 170), "4+3", 5, 12, 7, 5, "1d4 touch drain", MF.Undead | MF.NeedSilver | MF.Evil | MF.Hands | MF.ResCold,
                 "A barrow-king's spite in a corpse's body. Its touch drinks your experience, one life-lesson at a time.").Turn(5).Mor(11);
-            M("dice_golem", "dice golem", '\'', C(240, 240, 250), "7", 4, 9, 7, 4, "1d20 slam", MF.Mindless | MF.NoCorpse | MF.ResPoison | MF.ResSleep,
-                "Thousands of d20s fused into a shambling giant. It rattles when it walks. Every blow is a roll of fate.", Size.Large).Mor(12).Drops("gem", 60);
+            M("knucklebone_golem", "knucklebone golem", '\'', C(240, 240, 250), "7", 4, 9, 7, 4, "1d20 slam", MF.Mindless | MF.NoCorpse | MF.ResPoison | MF.ResSleep,
+                "Thousands of carved knucklebone dice, fused by a gambler-god's curse into a shambling giant. It rattles when it walks. Every blow is a throw of fate.", Size.Large).Mor(12).Drops("gem", 60);
             M("young_white", "young white dragon", 'D', C(230, 240, 255), "6", 3, 12, 7, 3, "1d4 claw;1d4 claw;2d8 bite", MF.Fly | MF.ResCold | MF.Warm | MF.Evil,
                 "A small dragon with a cold heart and a short attention span. Still a dragon.", Size.Large).Breathes(Elem.Cold, "4d6", 6, true, "frost").Mor(9).Drops("gold", 100).Al(Align.CE);
             M("wraith_bat", "vampire bat", 'b', C(120, 50, 60), "1+1", 8, 18, 6, 3, "1d4 bite blood", MF.Animal | MF.Fly | MF.Warm | MF.Erratic,
@@ -173,8 +173,8 @@ namespace Icosa
                 "Dark elves of the Underdark, cruel and elegant. Their crossbow bolts are tipped with sleep.").Shoots("1d3", "hand crossbow bolt", '-', C(170, 170, 200), 8, 40, AtkSp.Sleep).Casts(15, SpellId.Darkness2, SpellId.FaerieFire).Group(2, 4).Mor(9).Al(Align.CE).Drops("random", 30);
             M("drow_priestess", "drow priestess", '@', C(220, 90, 220), "5", 2, 12, 11, 3, "1d8 hit poison", Humanoid | MF.Evil | MF.ResSleep | MF.Infra,
                 "A high priestess of the Spider. Her whip has snake heads; her prayers have consequences.").Casts(45, SpellId.CauseSerious, SpellId.CHoldPerson, SpellId.Darkness2, SpellId.FlameStrike).With("drow").Mor(10).Al(Align.CE).Drops("random", 60);
-            M("errata", "the Errata", '?', C(255, 90, 90), "6", 3, 12, 10, 3, "1d8 touch errata", MF.NoCorpse | MF.Phase | MF.NeedMagic,
-                "A floating red correction. It rewrites the rules of your body: strength becomes charm, wisdom becomes speed, and nobody knows which edition you are in.").Mor(10);
+            M("flux_wraith", "flux wraith", '?', C(255, 90, 90), "6", 3, 12, 10, 3, "1d8 touch flux", MF.NoCorpse | MF.Phase | MF.NeedMagic,
+                "A flickering red shape of raw chaos. Its touch scrambles the body: strength becomes charm, wisdom becomes speed, and nothing sits where it should.").Mor(10);
             M("black_pudding", "black pudding", 'P', C(40, 30, 40), "10", 6, 3, 11, 3, "3d8 touch acid", MF.Mindless | MF.Splits | MF.NoCorpse | MF.ResCold | MF.ResAcid,
                 "A ton of black ooze that dissolves wood, metal and confidence. Blades split it into smaller, angrier puddings.", Size.Large).Mor(12);
             M("mind_flayer", "mind flayer", 'h', C(170, 110, 170), "8+4", 5, 12, 11, 3, "1d4 tentacle brain;1d4 tentacle brain", Humanoid | MF.Evil,
@@ -206,8 +206,8 @@ namespace Icosa
             M("balor", "balor", '&', C(230, 40, 30), "13", -2, 15, 15, 1, "2d6 sword fire;1d6 whip fire", MF.Evil | MF.NeedMagic | MF.Fly | MF.ResFire | MF.ResElec | MF.ResPoison | MF.FearAura | MF.Heat,
                 "A demon lord of flame and shadow, wielding a sword of lightning and a whip of fire. Its death is an explosion; its life is worse.", Size.Large).Glows(C(255, 60, 20), 3).Mor(12);
 
-            M("referee", "the Referee", 'L', C(255, 230, 140), "18", -2, 12, 15, 0, "1d10 touch paralyze;1d10 touch cold", MF.Undead | MF.NeedMagic | MF.Unique | MF.Boss | MF.Evil | MF.Hands | MF.ResCold | MF.ResElec | MF.NoCorpse,
-                "A lich in a moth-eaten robe, seated behind a vast folding screen painted with tables. It has run this dungeon for nine hundred years and has never once let a player win. It rolls in the open now. It no longer needs to fudge.").Turn(13)
+            M("hollow_king", "the Hollow King", 'L', C(255, 230, 140), "18", -2, 12, 15, 0, "1d10 touch paralyze;1d10 touch cold", MF.Undead | MF.NeedMagic | MF.Unique | MF.Boss | MF.Evil | MF.Hands | MF.ResCold | MF.ResElec | MF.NoCorpse,
+                "A lich in a moth-eaten crown, enthroned behind a towering veil of fused bone. It built this tomb nine hundred years ago to keep the Heart, and every soul who died in it now serves it. It has not lost a duel in all that time.").Turn(13)
                 .Casts(55, SpellId.Fireball, SpellId.ConeOfCold, SpellId.HoldMonster, SpellId.MagicMissile, SpellId.SummonUndead, SpellId.FingerOfDeath, SpellId.LightningBolt, SpellId.Blink)
                 .Glows(C(255, 220, 120), 3).Mor(12).Exp(6000).Al(Align.NE);
 

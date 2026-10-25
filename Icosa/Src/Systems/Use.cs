@@ -78,7 +78,7 @@ namespace Icosa
                     break;
                 case "confusion": p.Add(Status.Confused, Rng.Range(10, 20)); Learn(it, "{bad}Huh, what? Where am I?{/}"); break;
                 case "fortune": p.Set(Status.Fortune, 300, 1); Learn(it, "{gold}You feel lucky. Every d20 seems to want to roll high.{/}"); break;
-                case "misfortune": p.Set(Status.Fortune, 200, -1); Learn(it, "{bad}You feel jinxed. The dice turn cold in the dark.{/}"); break;
+                case "misfortune": p.Set(Status.Fortune, 200, -1); Learn(it, "{bad}You feel jinxed. Your luck turns cold in the dark.{/}"); break;
                 case "restoration": Magic.Cast(p, SpellId.Restoration, p.Pos, p.Level); Learn(it); break;
                 case "gain_level":
                     p.Xp = Math.Max(p.Xp, Rules.XpFor(p.Class, p.Level + 1));
@@ -180,25 +180,25 @@ namespace Icosa
                         Learn(it, "{holy}You hear maniacal laughter in the distance." + (n > 0 ? " Monsters flee!" : "") + "{/}");
                         break;
                     }
-                case "reroll":
+                case "remaking":
                     {
                         int s = Rng.Int(6);
                         var rolls = new[] { Rng.D(6), Rng.D(6), Rng.D(6), Rng.D(6) };
                         int total = rolls.Sum() - rolls.Min();
                         Dm.AddDie(6, total, 0, p.Base[s], "reroll " + Rules.StatNames[s], total > p.Base[s]);
                         Synth.Play(Sfx.Dice);
-                        Dm.Msg("{gold}The scroll rolls 4d6 for your " + Rules.StatLong[s] + ": [" + string.Join(" ", rolls) + "] = " + total + " (was " + p.Base[s] + ").{/}");
+                        Dm.Msg("{gold}The scroll unmakes and remakes your " + Rules.StatLong[s].ToLower() + ": [" + string.Join(" ", rolls) + "] = " + total + " (was " + p.Base[s] + ").{/}");
                         if (total > p.Base[s]) { p.Base[s] = total; Dm.Msg("{good}You feel your " + Rules.StatLong[s].ToLower() + " improve!{/}"); }
                         else Dm.Msg("You keep the better roll. Nothing changes.");
                         Learn(it);
                         break;
                     }
                 case "blank": Dm.Msg("This scroll seems to be blank."); Learn(it); break;
-                case "wandering":
+                case "wanderer":
                     {
-                        var m = Spawn.PlaceMonster(M, MonsterDb.Get("wandering"), p.Pos, false);
+                        var m = Spawn.PlaceMonster(M, MonsterDb.Get("wanderer"), p.Pos, false);
                         if (m != null) m.Aware = 40;
-                        Learn(it, "{bad}The Wandering Monster arrives, consulting a table.{/}");
+                        Learn(it, "{bad}The air tears open, and the Wanderer steps through.{/}");
                         break;
                     }
                 case "recharge":
@@ -398,7 +398,7 @@ namespace Icosa
                         for (int i = 0; i < 10; i++)
                         {
                             c = new Point(c.X + d.X, c.Y + d.Y);
-                            if (!Map.InB(c) || M.T[c.X, c.Y] is Tile.PermWall or Tile.Screen) break;
+                            if (!Map.InB(c) || M.T[c.X, c.Y] is Tile.PermWall or Tile.BoneVeil) break;
                             path.Add(c);
                             if (M.T[c.X, c.Y] is Tile.Wall or Tile.DoorSecret or Tile.Rubble or Tile.Crystal or Tile.Pillar or Tile.Statue or Tile.Bookshelf or Tile.DoorClosed or Tile.DoorLocked) { M.T[c.X, c.Y] = Tile.Corridor; dug++; }
                         }
@@ -450,7 +450,7 @@ namespace Icosa
                 case 4: Dm.Msg("{magic}Grass sprouts everywhere around you.{/}"); foreach (var c in Magic.BallCells(p.Pos, 3)) if (M.T[c.X, c.Y] == Tile.Floor) M.T[c.X, c.Y] = Tile.Grass; break;
                 case 5: Dm.Msg("{magic}You turn invisible!{/}"); p.Add(Status.Invisible, 100); break;
                 case 6: Dm.Msg("{magic}It rains gems! Mostly glass.{/}"); for (int i = 0; i < Rng.Range(3, 8); i++) M.Drop(Rng.Chance(80) ? Item.Make("glass") : Spawn.RandomItem(M.Depth, IK.Gem), M.NearestFree(p.Pos, 2) ?? p.Pos); break;
-                case 7: Dm.Msg("{magic}The wand shouts: \"ROLL FOR INITIATIVE!\"{/}"); Dm.Noise(p.Pos, 30, 100); break;
+                case 7: Dm.Msg("{magic}The wand lets out a deafening war cry!{/}"); Dm.Noise(p.Pos, 30, 100); break;
                 case 8: Dm.Msg("{magic}You grow larger, then smaller. Nothing else happens.{/}"); break;
                 case 9: Magic.Cast(p, SpellId.Slow, target, 6); break;
                 case 10: Magic.Cast(p, SpellId.Haste, p.Pos, 6); break;
@@ -876,7 +876,7 @@ namespace Icosa
             switch (r)
             {
                 case 1:
-                    Dm.Msg("{fumble}CRITICAL FUMBLE. The die laughs at you.{/}", true);
+                    Dm.Msg("{fumble}A single pip. The die's faces darken.{/}", true);
                     foreach (var it in p.Eq.Values) if (Rng.Chance(50)) it.Cursed = true;
                     var l = p.Worn(Slot.Light);
                     if (l != null && l.Def.Fuel < 99999) { l.Fuel = Math.Min(l.Fuel, 5); Dm.Msg("{bad}Your light gutters.{/}"); }
@@ -887,12 +887,12 @@ namespace Icosa
                     {
                         var perm = new[] { 0, 1, 2, 3, 4, 5 }.ToList();
                         Rng.Shuffle(perm);
-                        p.ErrataMap = perm.ToArray();
-                        p.Add(Status.Errata, 300);
-                        Dm.Msg("{red}ERRATA! Your abilities are reshuffled for a while.{/}");
+                        p.FluxMap = perm.ToArray();
+                        p.Add(Status.Flux, 300);
+                        Dm.Msg("{red}Chaos floods your body! Your abilities are scrambled for a while.{/}");
                         break;
                     }
-                case 4: Dm.Msg("{bad}Two wandering monsters answer the roll.{/}"); Dm.WanderingMonster(true); Dm.WanderingMonster(true); break;
+                case 4: Dm.Msg("{bad}Two monsters answer the die's call.{/}"); Dm.WanderingMonster(true); Dm.WanderingMonster(true); break;
                 case 5: p.Add(Status.Confused, 15); Dm.Msg("{bad}The numbers spin in your head.{/}"); break;
                 case 6: p.Gold /= 2; Dm.Msg("{bad}The die demands tribute. Half your gold is gone.{/}"); break;
                 case 7: p.Nutrition = Math.Min(p.Nutrition, 200); Dm.Msg("{bad}You feel suddenly ravenous.{/}"); break;
@@ -908,7 +908,7 @@ namespace Icosa
                 case 18: { var it = Spawn.RandomItem(M.Depth + 6, Rng.Pick(new IK?[] { IK.Ring, IK.Wand, IK.Amulet, IK.Armor })); it.Known = true; Dm.Msg("{gold}Something falls from above!{/}"); Actions.GiveOrDrop(it); break; }
                 case 19: { var w = p.Weapon; if (w != null) { w.Ench += 2; w.Cursed = false; w.Known = true; Dm.Msg("{gold}Your " + w.Def.Name + " blazes with blue light! (+2){/}"); } else { p.MaxHp += 6; p.Hp += 6; Dm.Msg("{gold}Your body hardens. (+6 max HP){/}"); } break; }
                 case 20:
-                    Dm.Msg("{crit}NATURAL TWENTY! The die blazes with golden light. A voice: \"Ask.\"{/}", true);
+                    Dm.Msg("{crit}TWENTY! The die blazes with golden light. A voice: \"Ask.\"{/}", true);
                     Synth.Play(Sfx.Holy);
                     Prompts.Wish();
                     break;
@@ -974,7 +974,7 @@ namespace Icosa
                         break;
                     }
                 case "Jester": Dm.GainXp(Math.Max(10, (Rules.XpFor(p.Class, p.Level + 1) - p.Xp) / 2)); Dm.Msg("{yellow}The Jester laughs and tosses you some experience.{/}"); break;
-                case "Fates": Dm.Msg("{gold}The Fates weave you a second chance.{/}"); Actions.GiveOrDrop(new Item(ItemDb.Get("a_second_roll")) { Known = true }); Dm.Ident.Learn("a_second_roll"); break;
+                case "Fates": Dm.Msg("{gold}The Fates weave you a second chance.{/}"); Actions.GiveOrDrop(new Item(ItemDb.Get("a_second_chance")) { Known = true }); Dm.Ident.Learn("a_second_chance"); break;
                 case "Donjon":
                     Dm.Msg("{bad}DONJON. You are cast down into a deeper prison.{/}", true);
                     Dm.EnterLevel(Math.Min(Rules.MaxDepth - 1, M.Depth + 2), Dm.Arrival.Teleport);
@@ -1057,7 +1057,7 @@ namespace Icosa
             "Protection — +3 to your armor",
             "Vigor — +10 max HP, +1 Constitution, restore drains",
             "Knowledge — identify, enlighten, and map",
-            "Luck — a long run of good dice",
+            "Luck — a long run of good fortune",
             "The Heart — skip the dungeon entirely",
         };
     }

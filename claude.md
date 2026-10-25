@@ -3,7 +3,8 @@
 - Do not write any comments in code.
 
 ## The Game
-**Tomb of the Twenty-Sided Heart** (`Icosa/`) is a C# MonoGame (DesktopGL, .NET 9) roguelike in the spirit of AD&D and NetHack. The player descends 15 levels, takes the Icosahedral Heart from the Referee (a lich behind a DM's screen) and climbs back out. It uses AD&D rules (THAC0, descending AC, saving throws, Vancian spells, races/classes/alignments), shows every die roll in a dice tray, and draws remembered map areas as ink on graph paper. Run with `dotnet run --project Icosa`.
+**Tomb of the Twenty-Sided Heart** (`Icosa/`) is a C# MonoGame (DesktopGL, .NET 9) roguelike in the spirit of AD&D and NetHack. The player descends 15 levels, takes the Icosahedral Heart from the Hollow King (a lich enthroned behind a Bone Veil) and climbs back out. It uses AD&D rules (THAC0, descending AC, saving throws, Vancian spells, races/classes/alignments), shows every die roll in a dice tray, and draws remembered map areas as ink on graph paper. Run with `dotnet run --project Icosa`.
+- The game is under development; changes that break existing save files are fine.
 
 ## Code Structure (`Icosa/Src`)
 - `RogueGame.cs` – MonoGame host: renderer (terminal grid, box glyphs drawn as primitives), keyboard/mouse input, screen stack (`Ui`), `AutoPilot` script runner, bot hookup.

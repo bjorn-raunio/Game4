@@ -320,7 +320,7 @@ namespace Icosa
         {
             "", "The Antechamber", "The Upper Halls", "The Kobold Warrens", "The Mines of Gilt", "The Ossuary", "The Fungal Deep",
             "The Drowned Temple", "The Troll Galleries", "The Shattered Vaults", "The Underdark Gate", "The Spider Courts",
-            "The Mind's Abyss", "The Ember Stair", "The Burning Deep", "Behind the Screen",
+            "The Mind's Abyss", "The Ember Stair", "The Burning Deep", "The Hollow Throne",
         };
 
         public const int MaxDepth = 15;

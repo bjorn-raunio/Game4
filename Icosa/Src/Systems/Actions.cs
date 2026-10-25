@@ -309,12 +309,12 @@ namespace Icosa
             Dm.Msg("{pink}You lift the Icosahedral Heart. It is warm, and it beats. Twenty faces turn to look at you.{/}", true);
             Dm.Msg("{pink}Somewhere far above, daylight waits. Climb.{/}");
             Dm.Achievements.Add("Took the Icosahedral Heart");
-            var lich = M.Monsters.FirstOrDefault(m => m.Def.Id == "referee");
+            var lich = M.Monsters.FirstOrDefault(m => m.Def.Id == "hollow_king");
             if (lich != null && !lich.Dead)
             {
                 lich.Sleeping = false;
                 lich.Aware = 99;
-                Dm.Msg("{crit}The Referee slams its book shut. \"THAT,\" it says, \"is not in the rules.\"{/}", true);
+                Dm.Msg("{crit}The Hollow King's eyes flare. \"THAT,\" it says, \"is mine.\"{/}", true);
             }
         }
 

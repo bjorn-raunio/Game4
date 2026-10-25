@@ -9,7 +9,7 @@ namespace Icosa
     {
         Wall, Floor, Corridor, DoorClosed, DoorOpen, DoorLocked, DoorSecret, DoorBroken, StairsUp, StairsDown,
         Shallow, DeepWater, Lava, Chasm, Rubble, Grass, Moss, Fountain, DryFountain, Altar, Throne, Statue, Pillar,
-        Bookshelf, Sarcophagus, Brazier, Web, Bridge, Rug, OracleDie, Dais, Crystal, Mushroom, Bones, PermWall, Screen, Glyph, Ash
+        Bookshelf, Sarcophagus, Brazier, Web, Bridge, Rug, OracleDie, Dais, Crystal, Mushroom, Bones, PermWall, BoneVeil, Glyph, Ash
     }
 
     public class TileDef
@@ -175,7 +175,7 @@ namespace Icosa
             D(Tile.Crystal, '♦', C(170, 220, 255), C(30, 40, 70), false, false, "crystal formation", "Glowing crystals jut from the stone.", false, 3, C(120, 170, 255));
             D(Tile.Mushroom, '♣', C(200, 120, 230), C(25, 10, 30), false, true, "giant mushroom", "A mushroom taller than a man, gently luminous.", false, 2, C(180, 90, 255));
             D(Tile.Bones, ',', C(220, 210, 190), C(20, 18, 16), true, true, "scattered bones");
-            D(Tile.Screen, '║', C(255, 220, 140), C(70, 30, 30), false, false, "the Screen", "A titanic folding screen, painted with random encounter tables and a crude drawing of you.");
+            D(Tile.BoneVeil, '║', C(255, 220, 140), C(70, 30, 30), false, false, "the Bone Veil", "A towering lattice of fused bone, carved with the names of everyone who has died in the Tomb. There is room left for yours.");
             D(Tile.Glyph, '¤', C(255, 240, 160), C(40, 35, 10), true, true, "burning glyph", "A holy glyph etched into the floor.");
             D(Tile.Ash, '·', C(80, 75, 70), C(18, 16, 15), true, true, "ash");
         }
@@ -194,7 +194,7 @@ namespace Icosa
         public bool BlocksSight(int x, int y) => !InB(x, y) || !Defs[T[x, y]].See;
         public bool Walkable(int x, int y) => InB(x, y) && Defs[T[x, y]].Walk;
         public bool Walkable(Point p) => Walkable(p.X, p.Y);
-        public bool IsWallish(int x, int y) => !InB(x, y) || T[x, y] is Tile.Wall or Tile.PermWall or Tile.DoorSecret or Tile.Screen;
+        public bool IsWallish(int x, int y) => !InB(x, y) || T[x, y] is Tile.Wall or Tile.PermWall or Tile.DoorSecret or Tile.BoneVeil;
         public bool IsDoor(Point p) => this[p] is Tile.DoorClosed or Tile.DoorOpen or Tile.DoorLocked or Tile.DoorBroken;
 
         public bool PassableFor(Monster m, int x, int y)
@@ -203,7 +203,7 @@ namespace Icosa
             var t = T[x, y];
             if (m.Def.Has(MF.Phase) && t is Tile.Wall or Tile.DoorSecret or Tile.DoorClosed or Tile.DoorLocked or Tile.Bookshelf or Tile.Pillar) return true;
             if (t == Tile.DoorClosed) return m.Def.Has(MF.Hands) || m.Def.Size == Size.Large;
-            if (t == Tile.DoorLocked) return m.Def.Size == Size.Large || m.Def.Id == "referee";
+            if (t == Tile.DoorLocked) return m.Def.Size == Size.Large || m.Def.Id == "hollow_king";
             if (m.Def.Has(MF.Burrow) && t is Tile.Wall or Tile.Rubble) return true;
             if (t == Tile.DeepWater) return m.Def.Has(MF.Fly) || m.Def.Has(MF.Swim);
             if (t == Tile.Lava) return m.Def.Has(MF.Fly) || m.Def.Has(MF.ResFire);

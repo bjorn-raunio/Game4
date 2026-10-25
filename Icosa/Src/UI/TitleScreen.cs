@@ -125,7 +125,7 @@ namespace Icosa
                         if (SaveGame.Load())
                         {
                             Ui.Replace(new GameScreen());
-                            Dm.Msg("{gold}Welcome back, " + Dm.Player.PName + ". The dice remember you.{/}");
+                            Dm.Msg("{gold}Welcome back, " + Dm.Player.PName + ". The Tomb remembers you.{/}");
                             Synth.Play(Sfx.Stairs);
                         }
                         else notice = "{bad}The save file could not be read.{/}";
@@ -169,7 +169,7 @@ namespace Icosa
             float glow = 0.6f + 0.4f * (float)Math.Sin(time * 1.5f);
             g.Text(g.Big, title, new Vector2(798 - m.X / 2 + 3, 492 + 3), new Color(60, 0, 20) * 0.8f);
             g.Text(g.Big, title, new Vector2(798 - m.X / 2, 492), Color.Lerp(new Color(255, 200, 120), new Color(255, 240, 200), glow));
-            string sub = "— the Referee is waiting behind the Screen —";
+            string sub = "— the Hollow King waits below —";
             var ms = g.Font.MeasureString(sub);
             g.Text(g.Font, sub, new Vector2(798 - ms.X / 2, 548), new Color(180, 160, 200));
         }
@@ -342,7 +342,7 @@ namespace Icosa
             if (step == Step.Stats)
             {
                 t.PrintM(lx, ly + 15, "{yellow}r{/} reroll   {yellow}Space{/} select & swap two scores   {yellow}Enter{/} accept", Pal.Text);
-                t.PrintM(lx, ly + 16, "{dim}Rolls so far: " + rerolls + ". The DM is watching, but says nothing.{/}", Pal.Dim);
+                t.PrintM(lx, ly + 16, "{dim}Rolls so far: " + rerolls + ".{/}", Pal.Dim);
                 t.PrintM(lx, ly + 18, "{dim}Classes these scores allow:{/}", Pal.Dim);
                 int yy = ly + 19;
                 var saveRace = race;
@@ -406,7 +406,7 @@ namespace Icosa
                 t.PrintM(rx, ry + 1, Rules.Races[race].Name + " " + Rules.Classes[cls].Name + ", " + Rules.AlignNames[(int)align], Pal.Text);
                 t.PrintM(rx, ry + 2, "{dim}Servant of{/} " + Rules.Deities[(int)align], Pal.Text);
                 t.PrintWrap(rx, ry + 4, 58, "{dim}Starting gear:{/} " + string.Join(", ", Chargen.KitNames(cls)), Pal.Text);
-                t.PrintWrap(rx, ry + 10, 58, "The torch sputters. The stairs go down. Somewhere below, a lich is shuffling character sheets and humming.", Pal.Text);
+                t.PrintWrap(rx, ry + 10, 58, "The torch sputters. The stairs go down. Somewhere below, a dead king waits on a throne of bone, and something in its hands is beating.", Pal.Text);
                 t.PrintM(rx, ry + 15, "{yellow}Enter{/} to descend into the Tomb · {yellow}Esc{/} to go back", Pal.Text);
             }
             t.PrintM(8, 42, "{dim}Esc: back{/}", Pal.Dim);

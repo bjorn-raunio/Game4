@@ -13,7 +13,7 @@ namespace Icosa
     public enum AtkSp
     {
         None, Poison, Poison2, Paralyze, Drain, Disease, Rust, Acid, Fire, Cold, Shock, Petrify, Engulf, BloodDrain,
-        StrDrain, StealGold, Confuse, Sleep, Stun, BrainEat, Slime, Hug, Swallow, Sticky, Smudge, Errata, Bleed
+        StrDrain, StealGold, Confuse, Sleep, Stun, BrainEat, Slime, Hug, Swallow, Sticky, Smudge, Flux, Bleed
     }
 
     [Flags]
@@ -76,7 +76,7 @@ namespace Icosa
         Asleep, Paralyzed, Confused, Blind, Hasted, Slowed, Invisible, Poisoned, Blessed, Shielded, Feared, Webbed,
         GiantStr, Heroism, ResFire, ESP, MirrorImage, Held, Stoning, Diseased, ProtEvil, Charmed, Turned, Silenced,
         Stunned, Sliming, Darkness, Engulfed, Sanctuary, Prayer, Bleeding, Levitate, ResCold, SeeInvis, Weakened,
-        Swallowed, FireShield, Globe, Errata, Rested, Telepathy, Hidden, ProtMissiles, Regenerating, Spiritual, Insight, Fortune, BladeBarrier, ProtUndead
+        Swallowed, FireShield, Globe, Flux, Rested, Telepathy, Hidden, ProtMissiles, Regenerating, Spiritual, Insight, Fortune, BladeBarrier, ProtUndead
     }
 
     public enum Slot { Weapon, Shield, Body, Helm, Cloak, Boots, Gloves, Bracers, Girdle, RingL, RingR, Amulet, Light, Quiver }
@@ -137,7 +137,7 @@ namespace Icosa
                         "swallow" => AtkSp.Swallow,
                         "sticky" => AtkSp.Sticky,
                         "smudge" => AtkSp.Smudge,
-                        "errata" => AtkSp.Errata,
+                        "flux" => AtkSp.Flux,
                         "bleed" => AtkSp.Bleed,
                         _ => AtkSp.None,
                     };

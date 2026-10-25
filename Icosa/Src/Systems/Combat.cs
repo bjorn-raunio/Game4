@@ -352,17 +352,17 @@ namespace Icosa
                     foreach (var it in map.Items.Where(i => s.Room.Cells.Contains(i.Pos))) it.Price = 0;
                 Dm.Msg("{dim}The shop is now unattended.{/}");
             }
-            if (d.Id == "referee")
+            if (d.Id == "hollow_king")
             {
-                Dm.Msg("{gold}The Referee crumples behind the Screen. Its dice scatter across the floor, every one showing a 1.{/}", true);
-                Dm.Msg("{gold}\"Fine,\" it rasps as it fades. \"You win. This time. Roll up a new one when you're ready.\"{/}");
-                Dm.Achievements.Add("Defeated the Referee");
+                Dm.Msg("{gold}The Hollow King crumples before its throne. Its crown rolls across the floor and comes to rest at your feet.{/}", true);
+                Dm.Msg("{gold}\"Nine hundred years,\" it rasps as it fades. \"Keep it, then. See how long it keeps you.\"{/}");
+                Dm.Achievements.Add("Destroyed the Hollow King");
                 Synth.Play(Sfx.Thunder);
                 for (int i = 0; i < 6; i++) map.Drop(Spawn.RandomItem(16), map.NearestFree(m.Pos, 3) ?? m.Pos);
                 map.Drop(Spawn.Gold(200), m.Pos);
                 for (int x = 0; x < Map.W; x++)
                     for (int y = 0; y < Map.H; y++)
-                        if (map.T[x, y] == Tile.Screen) map.T[x, y] = Tile.Rubble;
+                        if (map.T[x, y] == Tile.BoneVeil) map.T[x, y] = Tile.Rubble;
             }
             if (d.Id == "beholder" || d.Id == "balor" || d.Id.StartsWith("young_")) Dm.Achievements.Add("Slew " + m.A);
             if (d.Id == "balor")
@@ -459,9 +459,9 @@ namespace Icosa
                 bool crit = roll == 20 && !(p.Worn(Slot.Helm) != null && Rng.Chance(50));
                 if (crit) dmg += a.Dmg.Roll();
                 if (m.DmgPenalty > 0) dmg = dmg * (100 - m.DmgPenalty) / 100;
-                if (m.Def.Id == "dice_golem")
+                if (m.Def.Id == "knucklebone_golem")
                 {
-                    Dm.AddDie(20, dmg, 0, 0, "dice golem slam", false, dmg == 20, dmg == 1);
+                    Dm.AddDie(20, dmg, 0, 0, "knucklebone golem slam", false, dmg == 20, dmg == 1);
                 }
                 string verb = a.Verb switch
                 {
@@ -667,14 +667,14 @@ namespace Icosa
                     Dm.Msg("{ink}The ink wraith's touch smears your memory of the map like wet ink!{/}", true);
                     Dm.Map.Smudge(p.Pos, 25);
                     break;
-                case AtkSp.Errata:
+                case AtkSp.Flux:
                     {
                         var perm = new[] { 0, 1, 2, 3, 4, 5 }.ToList();
                         Rng.Shuffle(perm);
-                        p.ErrataMap = perm.ToArray();
-                        p.Add(Status.Errata, 100);
+                        p.FluxMap = perm.ToArray();
+                        p.Add(Status.Flux, 100);
                         var moved = Enumerable.Range(0, 6).Where(i => perm[i] != i).Select(i => Rules.StatLong[i] + " reads as " + Rules.StatLong[perm[i]]).Take(2);
-                        Dm.Msg("{red}ERRATA: The rules of your body are revised! " + string.Join("; ", moved) + ".{/}", true);
+                        Dm.Msg("{red}Chaos floods your body! " + string.Join("; ", moved) + ".{/}", true);
                         break;
                     }
                 case AtkSp.Bleed:

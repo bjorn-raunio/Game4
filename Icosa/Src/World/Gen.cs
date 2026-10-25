@@ -469,7 +469,7 @@ namespace Icosa
             var r = hall.R;
             int sx = r.X + 12;
             for (int y = r.Y; y < r.Bottom; y++)
-                if (y != r.Y + 4 && y != r.Bottom - 5) m.T[sx, y] = Tile.Screen;
+                if (y != r.Y + 4 && y != r.Bottom - 5) m.T[sx, y] = Tile.BoneVeil;
             for (int x = r.X + 2; x < sx - 1; x += 3)
             {
                 m.T[x, r.Y + 2] = Tile.Pillar;
@@ -490,16 +490,16 @@ namespace Icosa
                 m.Lights.Add(new StaticLight { P = new Point(x, y), R = 6, C = new Color(255, 150, 60), I = 1f, Flicker = true });
             var heart = Item.Make("heart");
             m.Drop(heart, new Point(r.Right - 4, cy));
-            var lich = new Monster(MonsterDb.Get("referee"));
+            var lich = new Monster(MonsterDb.Get("hollow_king"));
             lich.Pos = new Point(r.Right - 7, cy);
             lich.Sleeping = true;
             lich.Home = lich.Pos;
             m.Monsters.Add(lich);
-            m.Feeling = "Somewhere ahead, dice clatter on wood. A dry voice murmurs: \"Roll for initiative.\"";
+            m.Feeling = "Somewhere ahead, bones rattle in the dark. A dry voice murmurs: \"Another one.\"";
             for (int x = r.X; x < r.Right; x++)
                 for (int y = r.Y; y < r.Bottom; y++)
                     m.Lit[x, y] = x > sx;
-            m.Engravings[new Point(r.X + 2, cy)] = "Here begins the end. Players beyond this point must have their character sheets ready.";
+            m.Engravings[new Point(r.X + 2, cy)] = "Here begins the end. Beyond this point, the dead keep court.";
         }
 
         static void Decorate(Map m, Room finalHall)

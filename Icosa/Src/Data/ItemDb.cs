@@ -250,9 +250,9 @@ namespace Icosa
             S("curse", "curse", 1, 3, 2, "Curses your equipment. Someone has a sense of humor.");
             S("create_monster", "create monster", 1, 4, 1, "Calls a monster. Rarely what you wanted.");
             S("fear", "fear", 100, 4, 2, "A dreadful voice booms: monsters nearby flee.");
-            S("reroll", "reroll", 500, 2, 3, "Reroll 4d6 drop lowest on one of your abilities, and keep the better.");
+            S("remaking", "remaking", 500, 2, 3, "Unmakes and remakes one of your abilities, keeping whichever is better.");
             S("blank", "blank paper", 1, 3, 1, "This scroll is blank.");
-            S("wandering", "wandering monster", 1, 2, 3, "Summons the Wandering Monster itself. Please do not read.");
+            S("wanderer", "summon wanderer", 1, 2, 3, "Calls the Wanderer to you. Do not read.");
             S("recharge", "recharging", 300, 2, 4, "Restores charges to a wand. May explode.");
             S("teleport_level", "level teleportation", 400, 1, 5, "Teleports you to another dungeon level.");
 
@@ -293,7 +293,7 @@ namespace Icosa
             Am("a_poison", "periapt of proof against poison", 1000, 3, 3, "Protects you from poison.");
             Am("a_scarab", "scarab of protection", 3000, 2, 5, "Absorbs level drain and death magic.");
             Am("a_strangle", "necklace of strangulation", 1, 2, 3, "Tightens around your throat. Deadly.");
-            Am("a_second_roll", "amulet of the second roll", 5000, 1, 6, "When you die, the dice are rolled again. Once.");
+            Am("a_second_chance", "amulet of the second chance", 5000, 1, 6, "When you die, death is refused. Once.");
             Am("a_esp", "amulet of ESP", 1500, 2, 4, "You hear the thoughts of nearby creatures.");
 
             Io("ioun_str", "pale blue", "str", new Color(150, 190, 255), 2000, "A rhomboid ioun stone. +1 Strength while it orbits you.");

@@ -9,7 +9,7 @@ namespace Icosa
     public static class SaveGame
     {
         const int Magic = 0x1C05A;
-        const int Version = 3;
+        const int Version = 4;
 
         static string FilePath => System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Icosa", "save.dat");
         public static bool Disabled;
@@ -513,10 +513,10 @@ namespace Icosa
             w.Write(p.KillLog.Count);
             foreach (var kv in p.KillLog) { w.Write(kv.Key); w.Write(kv.Value); }
             w.Write(p.AttackFrac);
-            w.Write(p.ErrataMap != null);
-            if (p.ErrataMap != null) foreach (var v in p.ErrataMap) w.Write(v);
+            w.Write(p.FluxMap != null);
+            if (p.FluxMap != null) foreach (var v in p.FluxMap) w.Write(v);
             w.Write(p.HeartSaves);
-            w.Write(p.SecondRollUsed);
+            w.Write(p.SecondChanceUsed);
             w.Write(p.DeepestDepth);
             w.Write(p.GodAnger);
             w.Write(p.TurnsInDark);
@@ -561,11 +561,11 @@ namespace Icosa
             p.AttackFrac = r.ReadInt32();
             if (r.ReadBoolean())
             {
-                p.ErrataMap = new int[6];
-                for (int i = 0; i < 6; i++) p.ErrataMap[i] = r.ReadInt32();
+                p.FluxMap = new int[6];
+                for (int i = 0; i < 6; i++) p.FluxMap[i] = r.ReadInt32();
             }
             p.HeartSaves = r.ReadInt32();
-            p.SecondRollUsed = r.ReadBoolean();
+            p.SecondChanceUsed = r.ReadBoolean();
             p.DeepestDepth = r.ReadInt32();
             p.GodAnger = r.ReadInt32();
             p.TurnsInDark = r.ReadInt32();

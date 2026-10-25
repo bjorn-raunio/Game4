@@ -982,7 +982,7 @@ namespace Icosa
         {
             int raw = p.RawStat(s), eff = p.Stat(s);
             string col = eff > raw ? "{good}" : eff < raw ? "{bad}" : "{white}";
-            if (p.Has(Status.Errata)) col = "{red}";
+            if (p.Has(Status.Flux)) col = "{red}";
             return "{dim}" + Rules.StatNames[(int)s] + "{/} " + col + p.StatText(s).PadRight(6) + "{/}";
         }
 
@@ -1029,7 +1029,7 @@ namespace Icosa
             A(Status.Poisoned, "Poisoned", "bad"); A(Status.Diseased, "Diseased", "bad"); A(Status.Confused, "Confused", "bad"); A(Status.Blind, "Blind", "bad");
             A(Status.Paralyzed, "Paralyzed", "bad"); A(Status.Asleep, "Asleep", "bad"); A(Status.Stunned, "Stunned", "bad"); A(Status.Feared, "Afraid", "bad");
             A(Status.Stoning, "STONING", "red"); A(Status.Sliming, "SLIMING", "red"); A(Status.Held, "Held", "warn"); A(Status.Webbed, "Webbed", "warn");
-            A(Status.Bleeding, "Bleeding", "bad"); A(Status.Slowed, "Slow", "bad"); A(Status.Weakened, "Weak", "bad"); A(Status.Errata, "ERRATA", "red");
+            A(Status.Bleeding, "Bleeding", "bad"); A(Status.Slowed, "Slow", "bad"); A(Status.Weakened, "Weak", "bad"); A(Status.Flux, "Flux", "red");
             A(Status.Hasted, "Fast", "good"); A(Status.Invisible, "Invisible", "magic"); A(Status.Blessed, "Blessed", "holy"); A(Status.Shielded, "Shield", "magic");
             A(Status.MirrorImage, "Images", "magic"); A(Status.GiantStr, "Giant Str", "orange"); A(Status.Heroism, "Heroic", "gold"); A(Status.ResFire, "Res Fire", "orange");
             A(Status.ESP, "ESP", "magic"); A(Status.ProtEvil, "Prot Evil", "holy"); A(Status.Sanctuary, "Sanctuary", "holy"); A(Status.Prayer, "Prayer", "holy");

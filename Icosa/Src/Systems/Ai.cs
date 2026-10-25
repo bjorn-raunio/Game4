@@ -72,7 +72,7 @@ namespace Icosa
                     return;
                 }
                 if (Dm.CanSeeMonster(m) && !m.Def.Has(MF.Boss)) Dm.Msg(m.TheCap + " notices you!");
-                if (m.Def.Has(MF.Boss)) { Dm.Msg("{crit}The Referee rises. \"Initiative,\" it says, and rolls.{/}", true); Synth.Play(Sfx.Dice); }
+                if (m.Def.Has(MF.Boss)) { Dm.Msg("{crit}The Hollow King rises from its throne. \"Kneel,\" it says.{/}", true); Synth.Play(Sfx.Shriek); }
                 return;
             }
             if (sees)
@@ -89,7 +89,7 @@ namespace Icosa
             }
             else if (m.Aware > 0) m.Aware--;
 
-            if (m.Def.Has(MF.Boss)) { RefereeTurn(m, sees); if (m.Dead) return; }
+            if (m.Def.Has(MF.Boss)) { HollowKingTurn(m, sees); if (m.Dead) return; }
 
             var foe = AdjacentAlly(m);
             if (foe != null && (Path.Cheb(m.Pos, p.Pos) > 1 || Rng.Chance(40))) { Combat.MonsterMelee(m, foe); return; }
@@ -188,7 +188,7 @@ namespace Icosa
             }
         }
 
-        static void RefereeTurn(Monster m, bool sees)
+        static void HollowKingTurn(Monster m, bool sees)
         {
             if (!sees || m.Aware <= 0) return;
             m.CastCd--;
@@ -200,9 +200,9 @@ namespace Icosa
             if (Rng.Chance(14))
             {
                 int r = Rng.D(6);
-                Dm.AddDie(6, r, 0, 0, "the Random Encounter Table", null);
-                Synth.Play(Sfx.Dice);
-                Dm.Msg("{crit}The Referee rolls on the Random Encounter Table: " + r + "!{/}", true);
+                Dm.AddDie(6, r, 0, 0, "the Hollow King's grimoire", null);
+                Synth.Play(Sfx.Spell);
+                Dm.Msg("{crit}The Hollow King turns a page of its grimoire and speaks a word of power.{/}", true);
                 switch (r)
                 {
                     case 1:
@@ -218,17 +218,17 @@ namespace Icosa
                         P.Add(Status.Stunned, 1);
                         break;
                     case 4:
-                        Dm.Msg("{crit}\"Wandering monsters.\"{/}");
+                        Dm.Msg("{crit}\"Rise, my servants.\"{/}");
                         Dm.WanderingMonster(true);
                         Dm.WanderingMonster(true);
                         break;
                     case 5:
                         int heal = m.MaxHp / 5;
                         m.Hp = Math.Min(m.MaxHp, m.Hp + heal);
-                        Dm.Msg("{crit}\"I fudge.\"{/} The Referee's wounds close. (+" + heal + ")");
+                        Dm.Msg("{crit}\"I do not die.\"{/} The Hollow King's wounds close. (+" + heal + ")");
                         break;
                     case 6:
-                        Dm.Msg("{crit}\"Critical success... for you.\"{/} The Referee scowls, and the Heart pulses warmly.");
+                        Dm.Msg("{crit}The word of power falters.{/} The Hollow King hisses, and the Heart pulses warmly.");
                         P.Add(Status.Fortune, 15, 1);
                         break;
                 }

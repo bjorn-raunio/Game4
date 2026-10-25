@@ -2,7 +2,7 @@
 
 A roguelike in the spirit of Advanced Dungeons & Dragons, built with C# and MonoGame (DesktopGL).
 
-Descend fifteen levels, take the Icosahedral Heart from the Referee — a lich who has run this dungeon from behind its Screen for nine hundred years — and climb back out into daylight.
+Descend fifteen levels, take the Icosahedral Heart from the Hollow King — a lich who has guarded it behind a veil of bone for nine hundred years — and climb back out into daylight.
 
 ## Running
 

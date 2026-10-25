@@ -6,13 +6,13 @@ namespace Icosa
     {
         static readonly string[] graffiti =
         {
-            "THE DM FUDGES FOR NOBODY",
+            "THE DEAD KING KEEPS NO MERCY",
             "Trolls fear the flame. The flame fears the water. The water fears the cold. The cold fears only the troll.",
             "Never trust a chest that breathes.",
             "Gorbash was here. Gorbash is still here. Please send help to Gorbash.",
-            "The lich counts in twenties. So should you.",
-            "If you can read this, you have rolled well on Intelligence.",
-            "ROLL FOR PERCEPTION",
+            "The lich counts its years in centuries. Count yours in torches.",
+            "If you can read this, you are still alive. Stay that way.",
+            "LOOK UP",
             "Elves ignore the ghoul's kiss. Be an elf, or be elsewhere.",
             "Silver for the wererat. Fire for the troll. Prayer for everything else.",
             "Do not drink from the fountain. (Drank from the fountain.)",
@@ -23,29 +23,29 @@ namespace Icosa
             "Rust monsters are allergic to wooden clubs. That's a lie. They just don't care.",
             "Count your torches. Then count them again.",
             "Darkmantles hate light more than they love food.",
-            "Beware the Errata. Last week my strength was my charisma.",
+            "Beware the flux wraith. Last week my strength was my charm.",
             "Sit on thrones. Kings did, and look how well that went for them.",
             "The Oracle Die rolls once per pilgrim. Make it count.",
-            "A natural 1 is just the dungeon's way of saying hello.",
-            "Behind the screen: tables, all the way down.",
+            "Bad luck is just the dungeon's way of saying hello.",
+            "Behind the Bone Veil: bones, all the way down.",
             "The Heart has twenty faces. All of them are watching.",
             "Mimics like the third chest in any room. Superstition, but I'm alive.",
             "Wands of wonder are wonderful until they are not.",
-            "What is THAC0? A number you need to roll. What is life? The same.",
+            "The deeper the stair, the harder the stone. The harder the stone, the colder the dead.",
             "Pray when the end is near. Not before. The gods keep track.",
             "Here a wizard fell, asleep from his own spell. The goblins thanked him.",
             "Remember: rest to memorize. Rest in peace to forget.",
-            "Halfling party: brought snacks. Did not bring armor. Regret nothing.",
+            "Halfling band: brought supper. Did not bring armor. Regret nothing.",
             "Spike the doors. The ogres can't read.",
             "KOBOLDS: 3 TRAPS AHEAD (maybe 2)",
             "Every map is a lie that tells the truth eventually.",
             "Basilisks hate mirrors almost as much as they hate you.",
-            "The screen is painted on both sides. Only one side is for us.",
+            "The Veil is carved on both sides. Only one side is for the living.",
         };
 
         static readonly string[] rumors =
         {
-            "I heard the Referee keeps a second set of dice for players he likes. Nobody has ever seen them.",
+            "I heard the Hollow King keeps his heart in a jar, and the Heart in his hands. Nobody knows which one beats.",
             "They say a ring of three wishes lies somewhere below the troll galleries.",
             "The dwarves of the Mines of Gilt left a forge running. It still burns.",
             "Undead can be turned. The trick is finding a god who answers.",
@@ -59,18 +59,18 @@ namespace Icosa
             "Thieves backstab. Fighters frontstab. Wizards stab from very far away.",
             "The deck of many things: never draw more than you can bury.",
             "The Heart wants to go home. Home is the dark. Don't let it.",
-            "My party was eaten by a purple worm. Ask me how I escaped. (Through the other end.)",
-            "The paper golems are made of retired adventurers' character sheets. Some still have their stats.",
+            "My company was eaten by a purple worm. Ask me how I escaped. (Through the other end.)",
+            "The paper golems are folded from dead wizards' spellbooks. Some still remember a cantrip or two.",
             "Mind flayers find elves bland. Halflings, they say, are buttery.",
         };
 
         static readonly string[] epitaphs =
         {
-            "Rolled a 1.", "Should have brought a 10-foot pole.", "Thought it was a chest.", "Read the scroll anyway.",
+            "Slipped.", "Should have brought a 10-foot pole.", "Thought it was a chest.", "Read the scroll anyway.",
             "Died doing what they loved: dying.", "Here lies a hero. Mostly.", "Gone to the great tavern in the sky.",
-            "It was only a level-drain or two.", "The dice were cold that night.", "Forgot to memorize spells.",
-            "Tried to pet the owlbear.", "Not even the Referee fudged this one.", "Rest in pieces.",
-            "Had a good THAC0. Bad AC.", "Their torch went out.", "Saved vs. death. Failed.",
+            "It was only a level-drain or two.", "Luck was cold that night.", "Forgot to memorize spells.",
+            "Tried to pet the owlbear.", "Not even the gods could save this one.", "Rest in pieces.",
+            "Strong arm. Thin armor.", "Their torch went out.", "Saved vs. death. Failed.",
         };
 
         static readonly string[] syl1 = { "Al", "Bra", "Cor", "Dra", "El", "Fen", "Gar", "Hal", "Isa", "Jor", "Kel", "Lir", "Mor", "Nym", "Or", "Per", "Quel", "Ros", "Syl", "Tor", "Ul", "Val", "Wyn", "Xan", "Yse", "Zar" };
@@ -110,7 +110,7 @@ namespace Icosa
             {
                 "The corpse sighs: \"I took the left fork. Take the right.\"",
                 "The corpse rasps: \"The stairs down... always farther than you think.\"",
-                "The corpse whispers: \"Behind the screen... he rolls in the open now...\"",
+                "The corpse whispers: \"Beyond the Veil... the King does not sleep...\"",
                 "The corpse mutters: \"Should have rested. Should have memorized. Should have run.\"",
                 "The corpse groans: \"" + Rumor() + "\"",
                 "The corpse says: \"" + Graffiti() + "\"",

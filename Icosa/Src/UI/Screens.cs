@@ -154,7 +154,7 @@ namespace Icosa
             var l = new List<string>
             {
                 "{gold}TOMB OF THE TWENTY-SIDED HEART{/}",
-                "Descend fifteen levels, take the Icosahedral Heart from the Referee who guards it behind the Screen, and climb back to daylight.",
+                "Descend fifteen levels, take the Icosahedral Heart from the Hollow King who guards it behind the Bone Veil, and climb back to daylight.",
                 "",
                 "{gold}Movement{/}   arrows / numpad / hjklyubn · Shift+direction runs · Tab fights the nearest foe",
                 "             X auto-explore · > and < use stairs (or travel to known stairs) · . or numpad-5 waits",
@@ -299,13 +299,13 @@ namespace Icosa
                 {
                     t.Center(30, "{gold}V I C T O R Y{/}", Pal.Gold);
                     t.Center(32, p.PName + " the " + p.RaceInfo.Name + " " + p.ClassInfo.Name + " climbs out of the Tomb into the dawn,", Pal.White);
-                    t.Center(33, "the Icosahedral Heart beating in " + "their" + " hands. Behind, very far below, a dry voice mutters: \"Again.\"", Pal.White);
+                    t.Center(33, "the Icosahedral Heart beating in " + "their" + " hands. Far below, something old and patient begins to wait again.", Pal.White);
                 }
                 else
                 {
                     t.Center(30, "{gold}RETIRED{/}", Pal.Gold);
                     t.Center(32, p.PName + " climbs back into the daylight with " + p.Gold + " gold and a great many stories.", Pal.White);
-                    t.Center(33, "The Heart still beats, far below. Someone else will have to roll for it.", Pal.White);
+                    t.Center(33, "The Heart still beats, far below. Someone else will have to go down for it.", Pal.White);
                 }
                 t.Center(36, "Score: {gold}" + Dm.Score + "{/}   Level " + p.Level + "   Deepest: " + p.DeepestDepth + "   Kills: " + p.Kills + "   Turns: " + Dm.Turn, Pal.Text);
                 t.Center(Terminal.H - 2, "{dim}[Enter] Hall of Fame{/}", Pal.Dim);

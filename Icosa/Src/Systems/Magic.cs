@@ -479,7 +479,7 @@ namespace Icosa
                         Anim.Burst(target, cells, sd.C, '·', 0.3f);
                         foreach (var a in ActorsIn(cells).ToList())
                         {
-                            foreach (var s in new[] { Status.Hasted, Status.Invisible, Status.Shielded, Status.MirrorImage, Status.Blessed, Status.Slowed, Status.Webbed, Status.Charmed, Status.Paralyzed, Status.Asleep, Status.FireShield, Status.Globe, Status.GiantStr, Status.Sanctuary, Status.Errata, Status.Fortune })
+                            foreach (var s in new[] { Status.Hasted, Status.Invisible, Status.Shielded, Status.MirrorImage, Status.Blessed, Status.Slowed, Status.Webbed, Status.Charmed, Status.Paralyzed, Status.Asleep, Status.FireShield, Status.Globe, Status.GiantStr, Status.Sanctuary, Status.Flux, Status.Fortune })
                                 a.Remove(s);
                             if (a is Monster m)
                             {
@@ -613,7 +613,7 @@ namespace Icosa
                         for (int i = 0; i < 8; i++)
                         {
                             c = new Point(c.X + d.X, c.Y + d.Y);
-                            if (!Map.InB(c) || M.T[c.X, c.Y] is Tile.PermWall or Tile.Screen) break;
+                            if (!Map.InB(c) || M.T[c.X, c.Y] is Tile.PermWall or Tile.BoneVeil) break;
                             if (M.T[c.X, c.Y] is Tile.Wall or Tile.DoorSecret or Tile.Rubble or Tile.Crystal or Tile.Bookshelf or Tile.Pillar) { M.T[c.X, c.Y] = Tile.Corridor; dug++; }
                             else if (dug > 0) break;
                         }
@@ -728,7 +728,7 @@ namespace Icosa
                             if (pl.Wearing("a_scarab")) { Dm.Msg("{gold}Your scarab absorbs the death magic!{/}"); return true; }
                             if (!Dm.SavingThrow(pl, Save.Death, 0, "death magic"))
                             {
-                                Dm.Msg("{bad}The Referee points at you. Your heart stops.{/}", true);
+                                Dm.Msg("{bad}" + (caster is Monster cm ? cm.TheCap : "Something") + " points at you. Your heart stops.{/}", true);
                                 Combat.Damage(pl, pl.Hp + 50, Elem.Necro, caster, "the Finger of Death");
                             }
                             else Hurt(pl, Rng.Roll(2, 8), Elem.Necro, caster, "finger of death");

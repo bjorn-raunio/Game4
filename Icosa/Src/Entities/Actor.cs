@@ -203,12 +203,12 @@ namespace Icosa
         public readonly Dictionary<string, int> KillLog = new Dictionary<string, int>();
         public int AttackFrac;
         public int Luck;
-        public int[] ErrataMap;
+        public int[] FluxMap;
         public int LastHpGain;
         public bool LightOut;
         public int TurnsInDark;
         public int HeartSaves;
-        public bool SecondRollUsed;
+        public bool SecondChanceUsed;
         public int DeepestDepth = 1;
         public int ScarabCharges = -1;
         public int WishCharges = -1;
@@ -246,7 +246,7 @@ namespace Icosa
 
         public int Stat(Stat s)
         {
-            if (ErrataMap != null && Has(Status.Errata)) s = (Stat)ErrataMap[(int)s];
+            if (FluxMap != null && Has(Status.Flux)) s = (Stat)FluxMap[(int)s];
             int v = RawStat(s);
             switch (s)
             {

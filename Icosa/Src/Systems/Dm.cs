@@ -71,7 +71,7 @@ namespace Icosa
             StartTicks = DateTime.Now.Ticks;
             EnterLevel(1, Arrival.Start);
             Msg("{hi}Welcome, " + p.PName + " the " + p.RaceInfo.Name + " " + p.ClassInfo.Name + ".{/}");
-            Msg("Somewhere below waits the {pink}Icosahedral Heart{/}, and the Referee who guards it. Press {yellow}?{/} for help.");
+            Msg("Somewhere below waits the {pink}Icosahedral Heart{/}, and the Hollow King who guards it. Press {yellow}?{/} for help.");
         }
 
         public enum Arrival { Start, Down, Up, Fall, Teleport }
@@ -260,7 +260,7 @@ namespace Icosa
                         if (!m.Seen)
                         {
                             m.Seen = true;
-                            if (m.Def.Has(MF.Boss)) Msg("{crit}The Referee looks up from behind the Screen. \"Ah. A player.\"{/}", true);
+                            if (m.Def.Has(MF.Boss)) Msg("{crit}The Hollow King looks up from behind the Bone Veil. \"Ah. A visitor.\"{/}", true);
                         }
                     }
                 }
@@ -507,7 +507,7 @@ namespace Icosa
                 }
             }
             foreach (var it in p.Iouns) it.OrbitPhase++;
-            if (p.Has(Status.Errata) && p.Turns(Status.Errata) == 1) { p.ErrataMap = null; Msg("{good}The rules of your body revert to the proper edition.{/}"); }
+            if (p.Has(Status.Flux) && p.Turns(Status.Flux) == 1) { p.FluxMap = null; Msg("{good}Your body settles back into its proper shape.{/}"); }
         }
 
         static void CloudEffect(Actor a)
@@ -638,7 +638,7 @@ namespace Icosa
                 m.Aware = aware || Rng.Chance(50) ? 60 : 0;
                 m.LastSeen = Player.Pos;
             }
-            if (!aware) Msg("{dim}Somewhere in the dark, dice clatter behind a screen.{/}");
+            if (!aware) Msg("{dim}Somewhere in the dark, something stirs.{/}");
         }
 
         public static void Die(string cause)
@@ -665,14 +665,14 @@ namespace Icosa
                 }
                 Msg("{bad}The Icosahedral Heart spins... and lands on " + r + ". Not enough.{/}", true);
             }
-            if (p.Wearing("a_second_roll") && !p.SecondRollUsed)
+            if (p.Wearing("a_second_chance") && !p.SecondChanceUsed)
             {
-                p.SecondRollUsed = true;
-                var am = p.Eq.FirstOrDefault(kv => kv.Value.Def.Effect == "a_second_roll");
+                p.SecondChanceUsed = true;
+                var am = p.Eq.FirstOrDefault(kv => kv.Value.Def.Effect == "a_second_chance");
                 p.Eq.Remove(am.Key);
                 p.Pack.Remove(am.Value);
-                Ident.Learn("a_second_roll");
-                Msg("{gold}But wait... the dice are rolled again! Your amulet shatters, and you live!{/}", true);
+                Ident.Learn("a_second_chance");
+                Msg("{gold}But wait... death lets go! Your amulet shatters, and you live!{/}", true);
                 Synth.Play(Sfx.Holy);
                 p.Hp = p.MaxHp;
                 p.Remove(Status.Stoning);
